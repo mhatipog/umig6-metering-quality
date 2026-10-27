@@ -27,7 +27,7 @@ origin = screen_source_provenance(screen.accepted)
 # Stage 3: version handling ONLY for genuinely source-authored revisions.
 # Snapshots with no revision metadata remain analytically useful but must
 # not pass through the official-looking correction replay.
-reading_dq = process_metering(origin.replay_ready)
+reading_dq = process_metering(origin.replay_ready, require_source_revision=True)
 asset_dq = validate_asset_history(assets)
 joined = reconcile_metering_assets(reading_dq.current, asset_dq.accepted)
 reference_review = joined.where(F.size("asset_reference_issues") > 0)

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0 — 27 October 2026
+
+**Public developer handoff.** Strict source-revision mode and declared timestamp guards prevent unresolved UTC labels or export snapshots from being mistaken for authoritative market corrections. The default remains usable for *explicitly labelled* consumer-export comparisons; those results are not MIG6 market corrections.
+
+- Consolidated README, operational handoff and source/rule provenance boundaries.
+- Published fail-closed source metadata checks, microsecond duration validation, non-finite volume rejection, local-clock DST rules and independent quarantine/review lanes.
+- Reproducible full public Fluvius 2024 benchmark and synthetic correction-heavy four-output benchmark; neither implies production CMS/Photon performance.
+- [Latest CI](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40557078089): **93 tests passed on both PySpark 3.5.5 and 4.2.1**.
+- Package is installable from GitHub; not released on PyPI or certified by Atrias.
+
+
 ## 0.7.0 — 27 October 2026
 
 ### Correctness and evidence
