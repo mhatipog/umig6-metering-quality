@@ -77,21 +77,35 @@ def _columns(df: DataFrame, provided: Mapping[str, str] | None) -> dict[str, str
 
 
 def _parse_wall_clock(date: F.Column, clock: F.Column) -> F.Column:
-    # Some published Fluvius report examples have hours such as "0:00:00"
-    # and dates such as "1/01/2021". Pad a single-digit hour, then parse
-    # explicitly instead of relying on Spark's locale or machine timezone.
+    """Normalize published D/M/YY, D/M/YYYY and ISO dates, then parse once.
+
+    Spark 3.5 can raise SparkUpgradeException when coalescing try_to_timestamp
+    calls with mismatched legacy date patterns. Avoid multiple parsers and
+    EXCEPTION/LEGACY session settings by composing a canonical ISO source.
+    For two-digit report years, the documented convention here is 20YY;
+    an ambiguous century must be resolved upstream for other legacy feeds.
+    """
+    raw_date = F.trim(date)
     padded_clock = F.regexp_replace(F.trim(clock), r"^([0-9]):", r"0$1:")
-    value = F.concat_ws(" ", F.trim(date), padded_clock)
-    return F.coalesce(*(
-        F.try_to_timestamp(value, F.lit(fmt))
-        for fmt in (
-            "dd-MM-yy HH:mm:ss", "dd-MM-yyyy HH:mm:ss",
-            "d-M-yy HH:mm:ss", "d-M-yyyy HH:mm:ss",
-            "dd/MM/yy HH:mm:ss", "dd/MM/yyyy HH:mm:ss",
-            "d/M/yy HH:mm:ss", "d/M/yyyy HH:mm:ss",
-            "yyyy-MM-dd HH:mm:ss",
-        )
-    ))
+    dmy = r"^(\d{1,2})[-/](\d{1,2})[-/](\d{2}|\d{4})$"
+    iso = r"^(\d{4})-(\d{1,2})-(\d{1,2})$"
+
+    day = F.regexp_extract(raw_date, dmy, 1)
+    month = F.regexp_extract(raw_date, dmy, 2)
+    year = F.regexp_extract(raw_date, dmy, 3)
+    year = F.when(F.length(year) == 2, F.concat(F.lit("20"), year)).otherwise(year)
+    dmy_normalized = F.concat_ws("-", year, F.lpad(month, 2, "0"), F.lpad(day, 2, "0"))
+
+    iso_year = F.regexp_extract(raw_date, iso, 1)
+    iso_month = F.regexp_extract(raw_date, iso, 2)
+    iso_day = F.regexp_extract(raw_date, iso, 3)
+    iso_normalized = F.concat_ws("-", iso_year, F.lpad(iso_month, 2, "0"), F.lpad(iso_day, 2, "0"))
+    normalized_date = (
+        F.when(F.length(F.regexp_extract(raw_date, dmy, 1)) > 0, dmy_normalized)
+        .when(F.length(iso_year) > 0, iso_normalized)
+    )
+    value = F.concat_ws(" ", normalized_date, padded_clock)
+    return F.try_to_timestamp(value, F.lit("yyyy-MM-dd HH:mm:ss"))
 
 
 def _unresolvable_local_time(wall: F.Column) -> F.Column:
