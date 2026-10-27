@@ -96,13 +96,14 @@ def run(spark, rows: int, partitions: int, workload: str, revisions_every: int =
                       "corrections-full-cached-evidenced"):
         cached = workload != "corrections-full"
         # The evidenced mode measures the additional declared-provenance
-        # predicate, NOT an independent check of an upstream source contract.
+        # predicate and strict source-replay mode; NOT an independent audit
+        # of an upstream source contract.
         input_df = df
         if workload == "corrections-full-cached-evidenced":
             input_df = (df.withColumn("timestamp_semantics", F.lit("UTC_VERIFIED"))
                        .withColumn("revision_basis", F.lit("SOURCE_REVISION")))
         # All four sinks, including explicitly releasing cached history.
-        with process_metering(input_df, cache_shared=cached) as result:
+        with process_metering(input_df, cache_shared=cached, require_source_revision=(workload == 'corrections-full-cached-evidenced')) as result:
             accepted, rejected = result.current.count(), result.rejected.count()
             superseded, changed = result.superseded.count(), result.changes.count()
             plan = result.current._jdf.queryExecution().optimizedPlan().toString()
