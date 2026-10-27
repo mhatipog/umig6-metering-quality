@@ -93,3 +93,16 @@ def test_public_profile_utc_labels_are_explicitly_unverified(spark):
     x = screen_public_profiles(sample(spark, (
         "p", "2024-10-27", "2024-10-27T02:15:00.000Z", "0.3", "0")))
     assert x.valid.first().source_utc_label_unverified is True
+
+
+def test_p6269_z_label_local_clock_not_reinterpreted_as_utc(spark):
+    # Official P6269's Z labels behave like Brussels local wall time.
+    winter = screen_public_profiles(sample(spark,
+        ("p", "2024-01-01", "2024-01-01T00:15:00.000Z", "0.3", "0"))).valid.first()
+    summer = screen_public_profiles(sample(spark,
+        ("p", "2024-07-01", "2024-07-01T02:15:00.000Z", "0.3", "0"))).valid.first()
+    assert winter.local_start_be.isoformat() == "2024-01-01T00:15:00"
+    assert summer.local_start_be.isoformat() == "2024-07-01T02:15:00"
+    assert winter.timestamp_semantics == "UTC_LABEL_UNVERIFIED"
+    assert winter.revision_basis == "EXPORT_SNAPSHOT"
+    assert winter.source_utc_label_unverified is True

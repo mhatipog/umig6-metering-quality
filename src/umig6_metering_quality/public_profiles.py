@@ -3,9 +3,10 @@
 This is NOT an official UMIG/MIG6 message format. EAN_ID is an anonymised
 profile label, not proof of a real supply point or a physical meter ID.
 
-Prefer the source's ISO-8601 UTC timestamps (Datum_Startuur with Z). For
-local-time-only variants, the repeated fall-back 02:00 hour is ambiguous and
-quarantined rather than silently shifted.
+The source uses ISO-labelled timestamps (Datum_Startuur with Z), but its
+2024 DST days match Belgian local clock labels. Preserve both source labels
+and the warning that the apparent UTC instant is unverified. Alternative
+local-time-only variants quarantine ambiguous fall-back times.
 """
 
 from __future__ import annotations
@@ -60,6 +61,8 @@ def screen_public_profiles(df: DataFrame) -> PublicProfilesResult:
     missing = sorted(set(PUBLIC_COLUMNS) - set(df.columns))
     if missing:
         raise ValueError("Missing P6269 columns: " + ", ".join(missing))
+    if df.sparkSession.conf.get("spark.sql.session.timeZone").upper() != "UTC":
+        raise ValueError("Public profiles require spark.sql.session.timeZone=UTC; do not silently shift source clock labels")
     raw_start = F.trim(F.col("Datum_Startuur"))
     is_explicit = raw_start.rlike(r"(?i)(Z|[+-][0-9]{2}:[0-9]{2})$")
     # Original P6269 files use UTC ISO-8601 timestamps, e.g.
@@ -69,7 +72,12 @@ def screen_public_profiles(df: DataFrame) -> PublicProfilesResult:
     interval_utc = F.when(is_explicit, explicit_utc).otherwise(
         F.to_utc_timestamp(local_from_date, "Europe/Brussels")
     )
-    local = F.when(is_explicit, F.from_utc_timestamp(explicit_utc, "Europe/Brussels")).otherwise(local_from_date)
+    # Public P6269 Z-labelled timestamps follow *local* DST clock labels.
+    # This is source-wall-clock presentation, NOT proof of a unique UTC instant.
+    is_source_z = raw_start.rlike(r"(?i)Z$")
+    local = (F.when(is_source_z, explicit_utc)
+             .when(is_explicit, F.from_utc_timestamp(explicit_utc, "Europe/Brussels"))
+             .otherwise(local_from_date))
     # EAN_ID is an anonymised profile ID; never validate it as a Belgian EAN.
     value_import = F.try_cast(F.regexp_replace(F.trim(F.col("Volume_Afname_KWh")), ",", "."), "decimal(24,9)") if hasattr(F, 'try_cast') else F.expr("try_cast(replace(trim(Volume_Afname_KWh), ',', '.') as decimal(24,9))")
     value_export = F.expr("try_cast(replace(trim(Volume_Injectie_KWh), ',', '.') as decimal(24,9))")
@@ -95,6 +103,10 @@ def screen_public_profiles(df: DataFrame) -> PublicProfilesResult:
         .withColumn("injection_kwh", value_export)
         .withColumn("quality_errors", errors)
         .withColumn("source_utc_label_unverified", F.lit(True))
+        .withColumn("timestamp_semantics", F.lit("UTC_LABEL_UNVERIFIED"))
+        .withColumn("revision_basis", F.lit("EXPORT_SNAPSHOT"))
+        .withColumn("source_system", F.lit("PUBLIC_FLUVIUS_P6269"))
+        .withColumn("source_evidence_ref", F.lit(DATASET_ID))
         .withColumn("interval_start_utc", interval_utc)
         .withColumn("interval_end_utc", F.col("interval_start_utc") + F.expr("INTERVAL 15 MINUTES")))
     valid = checked.where(F.size("quality_errors") == 0)
