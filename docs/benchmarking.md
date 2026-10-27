@@ -122,3 +122,40 @@ versioned batch/transaction barrier pattern for real jobs. The example is
 only to demonstrate the cache lifecycle, **not** production persistence
 semantics. Cache memory, spill and node cost require validation on the
 target Databricks workload.
+
+## Revision-heavy end-to-end benchmark — independently measured
+
+[Run 40552466015](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40552466015)
+uses `--revisions-every 10` on a generated one-million-row, 4,096-supply-point
+sample. Every tenth sequence repeats the previous interval's business key
+with a later source-authored revision timestamp and different kWh. This
+produced **98,304 superseded values and 98,304 changed transitions**;
+there were 901,696 current readings and no artificial quarantined conflicts.
+
+Every row in all four correction output lanes was materialised. Runner was
+GitHub-hosted local Spark 4.2.1, **not** Databricks or a private Fluvius feed.
+
+| Revision-heavy workload | Shuffle partitions | Seconds | Rows/s |
+|---|---:|---:|---:|
+| Uncached | 8 | 59.418 | 16,830 |
+| Cached shared history | 8 | 32.426 | 30,839 |
+| Cached shared history | 32 | 34.159 | 29,275 |
+
+Caching reduced measured wall time by **45.4%** in the 8-partition
+comparison. Neither row count nor correction outcomes changed in the two
+modes. Runners were separate single measurements; repeated runs, skew,
+memory/spill metrics and a genuine Databricks Photon measurement are still
+necessary before setting cluster-wide defaults.
+
+Command to reproduce:
+
+```bash
+python examples/benchmark_spark.py \
+  --rows 1000000 --partitions 8 --shuffle-partitions 8 \
+  --revisions-every 10 --workload corrections-full-cached \
+  --output-json correction-revisions.json
+```
+
+To compare with the uncached mode, change `--workload` to
+`corrections-full`. Materialising only `current` and `rejected`
+understates the cost of a real revision audit.
