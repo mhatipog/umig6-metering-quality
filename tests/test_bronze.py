@@ -31,3 +31,11 @@ def test_bronze_does_not_enrich_unverified_utc_claim(readings, make_reading, utc
     data = screen_metering_rows(readings([make_reading(utc())]))
     assert "local_date_be" not in data.accepted.columns
     assert "avg_power_kw" not in data.accepted.columns
+
+
+def test_legacy_without_source_revision_can_still_be_screened(spark, readings, make_reading, utc):
+    legacy = readings([make_reading(utc())]).drop("revision_at_utc")
+    result = screen_metering_rows(legacy)
+    assert result.accepted.count() == 1
+    assert "revision_at_utc" in result.accepted.columns
+    assert result.accepted.first().revision_at_utc is None

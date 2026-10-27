@@ -25,15 +25,21 @@ def screen_metering_rows(
 ) -> BronzeScreenResult:
     """Validate each observation without aggregation, deduplication or joins.
 
+    A missing revision_at_utc is added as NULL, never invented from ingestion time.
     Passing does not establish whether the row was superseded, is a conflicting
     correction, has valid source timestamp provenance, or fills an active scope.
     Run provenance screening and process_metering() afterwards when needed.
     """
     if interval_minutes <= 0 or 1440 % interval_minutes:
         raise ValueError("interval_minutes must be a positive divisor of 1440")
-    _check_columns(readings, REQUIRED, "readings")
-    _check_types(readings)
-    checked = _checks(readings, interval_minutes, validate_ean_format)
+    # Raw legacy Bronze feeds may not carry a business revision timestamp.
+    # NULL is explicit absence, never a made-up source revision.
+    _check_columns(readings, tuple(n for n in REQUIRED if n != "revision_at_utc"), "readings")
+    normalized = readings if "revision_at_utc" in readings.columns else (
+        readings.withColumn("revision_at_utc", F.lit(None).cast("timestamp"))
+    )
+    _check_types(normalized)
+    checked = _checks(normalized, interval_minutes, validate_ean_format)
     passed = F.size("quality_errors") == 0
     result = checked.withColumn("bronze_screen_status", F.when(passed, "PASS").otherwise("QUARANTINE"))
     summary = result.agg(
