@@ -92,10 +92,17 @@ def run(spark, rows: int, partitions: int, workload: str, revisions_every: int =
         # Legacy benchmark: only materialises the current and rejected lanes.
         accepted, rejected = result.current.count(), result.rejected.count()
         plan = result.current._jdf.queryExecution().optimizedPlan().toString()
-    elif workload in ("corrections-full", "corrections-full-cached"):
-        cached = workload == "corrections-full-cached"
-        # All four sinks, including explicitly releasing any cached history.
-        with process_metering(df, cache_shared=cached) as result:
+    elif workload in ("corrections-full", "corrections-full-cached",
+                      "corrections-full-cached-evidenced"):
+        cached = workload != "corrections-full"
+        # The evidenced mode measures the additional declared-provenance
+        # predicate, NOT an independent check of an upstream source contract.
+        input_df = df
+        if workload == "corrections-full-cached-evidenced":
+            input_df = (df.withColumn("timestamp_semantics", F.lit("UTC_VERIFIED"))
+                       .withColumn("revision_basis", F.lit("SOURCE_REVISION")))
+        # All four sinks, including explicitly releasing cached history.
+        with process_metering(input_df, cache_shared=cached) as result:
             accepted, rejected = result.current.count(), result.rejected.count()
             superseded, changed = result.superseded.count(), result.changes.count()
             plan = result.current._jdf.queryExecution().optimizedPlan().toString()
@@ -114,12 +121,14 @@ def run(spark, rows: int, partitions: int, workload: str, revisions_every: int =
         "spark_adaptive_execution": spark.conf.get("spark.sql.adaptive.enabled"),
         "environment": os.environ.get("BENCH_ENVIRONMENT", "unspecified"),
     }
-    if workload in ("corrections-full", "corrections-full-cached"):
+    if workload in ("corrections-full", "corrections-full-cached", "corrections-full-cached-evidenced"):
         out["superseded"] = int(superseded)
         out["changed"] = int(changed)
         out["materialized_outputs"] = ["current", "rejected", "superseded", "changes"]
     elif workload == "corrections":
         out["materialized_outputs"] = ["current", "rejected"]
+    if workload == "corrections-full-cached-evidenced":
+        out["scope"] = "DECLARED_PROVENANCE_GUARD_ONLY_NOT_EXTERNAL_EVIDENCE_AUDIT"
     df.unpersist()
     return out
 
@@ -131,7 +140,7 @@ def main():
     parser.add_argument("--revisions-every", type=int, default=0,
                         help="Every Nth observation per point is a later changed revision; 0 means unique")
     parser.add_argument("--shuffle-partitions", type=int, help="Optional explicit benchmark shuffle partition count")
-    parser.add_argument("--workload", choices=("readiness", "rulebook", "bronze", "provenance", "corrections", "corrections-full", "corrections-full-cached", "all"), default="all")
+    parser.add_argument("--workload", choices=("readiness", "rulebook", "bronze", "provenance", "corrections", "corrections-full", "corrections-full-cached", "corrections-full-cached-evidenced", "all"), default="all")
     parser.add_argument("--output-json", help="Write structured metrics to a JSON file")
     args = parser.parse_args()
     if args.revisions_every < 0 or args.revisions_every == 1:
