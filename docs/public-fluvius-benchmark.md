@@ -57,3 +57,34 @@ from umig6_metering_quality import profile_coverage
 coverage = profile_coverage(checked)
 coverage.where("coverage_status = 'INCOMPLETE'").show()
 ```
+
+## Verified full-corpus measurement — 27 October 2026
+
+[GitHub Actions run 40510590838](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40510590838),
+commit `cce9911363ce1309d535474a319d855706c54aea`:
+
+- **84,326,400 actual observations** from all eight 2024 category CSVs.
+- **84,326,400 passed row-level checks; 0 quarantined.** This is a curated
+  complete-profile sample, not a measure of real-world production error rates.
+- **229.913 seconds** summed quality processing time, excluding network ZIP
+  transfer and extraction; about **366,775 rows/second** over eight stages.
+- Spark 4.2.0, GitHub-hosted Ubuntu runner, local execution, no Photon or
+  Databricks compute. Separate jobs may have different runner specifications.
+- First ZIP SHA-256: `0f8addd57bd9f7bc0fd0c28b019a4b6c8753a19e3fd301de758f5a5858c9d86c`
+- Second ZIP SHA-256: `cfef37973c40e503fe53afa4966bbdcd7a12525fb8b20881f365d0ee8616a3d6`
+
+| Source category | Rows | Quality processing (seconds) |
+|---|---:|---:|
+| Heat pump, no PV | 10,540,800 | 31.526 |
+| Heat pump, PV | 10,540,800 | 28.423 |
+| PV only | 10,540,800 | 28.527 |
+| Neither PV nor heat pump | 10,540,800 | 28.538 |
+| EV, no PV | 10,540,800 | 27.924 |
+| EV, PV | 10,540,800 | 28.113 |
+| Heat pump + EV, no PV | 10,540,800 | 28.347 |
+| Heat pump + EV + PV | 10,540,800 | 28.515 |
+
+The real source has an ISO-8601 `Datum_Startuur` in UTC (`Z` suffix), not
+ambiguous Brussels wall times. The parser preserves this offset. The original
+consumer CSV adapter for local times uses separate, conservative DST handling.
+All measurements are from the original public ZIPs, not a synthetic workload.

@@ -216,6 +216,11 @@ MIT. Not affiliated with Atrias, Fluvius or any energy-market operator.
 
 ### Real Fluvius 2024 data benchmark
 
+**Measured on all 84,326,400 official 2024 quarter-hours:** 229.913 seconds of
+Spark quality processing on a GitHub-hosted local runner; 0 row-level violations
+under the implemented checks. [Benchmark evidence and limitations](docs/public-fluvius-benchmark.md).
+No claims about Databricks or actual CMS conformance are implied.
+
 The [public P6269 profile adapter](docs/public-fluvius-benchmark.md) screens
 all eight official 2024 CSV categories at source-row grain. It uses no private
 CMS data, makes no fabricated physical-meter assumptions, preserves source ISO-8601 UTC instants and quarantines local-only
