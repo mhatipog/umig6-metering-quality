@@ -49,7 +49,7 @@ jobs:
                           with archive.open(info) as stream:
                               for n in range(3):
                                   row=stream.readline().decode("utf-8-sig",errors="replace")
-                                  print("CSV HEADER",row.strip() if n==0 else "<redacted>",flush=True)
+                                  print("CSV HEADER",row.strip() if n==0 else ("DATE/TIME "+str(row.split(",")[1:3])+" VOLUME_FORMAT "+str([len(x) for x in row.split(",")[3:5]])),flush=True)
                           break
               target.unlink()
           PY
