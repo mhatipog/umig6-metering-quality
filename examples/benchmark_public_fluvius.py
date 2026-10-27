@@ -67,7 +67,7 @@ def benchmark(spark, output_path: str, *, max_files: int = 8):
             archive_checksums.append(details)
             print("Verified downloaded bytes / sha256", details, flush=True)
             with zipfile.ZipFile(zip_path) as archive:
-                members = sorted(m for m in archive.infolist() if m.filename.lower().endswith(".csv"))
+                members = sorted((m for m in archive.infolist() if m.filename.lower().endswith(".csv")), key=lambda m: m.filename)
                 if len(members) != 4:
                     raise RuntimeError(f"Expected four category CSV files per archive, found {len(members)}")
                 for member in members:

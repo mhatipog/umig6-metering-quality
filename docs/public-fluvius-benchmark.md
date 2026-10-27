@@ -22,10 +22,11 @@ python examples/benchmark_public_fluvius.py --max-files 8 --output full.json
 ```
 
 For each input row, the quality engine checks source identity, parseable
-quarter-hour timestamps, unambiguous Europe/Brussels wall time, import and
+quarter-hour timestamps, explicit UTC timestamps (or unambiguous Europe/Brussels local time), import and
 injection energy values, and interval alignment. It keeps anomalous rows out
-of the valid subset. The repeated autumn 02:00 hour is explicitly quarantined
-if the source provides no time offset. This is a deliberate limit, not proof
+of the valid subset. The official archive uses UTC ISO-8601 timestamps with a `Z` suffix,
+so repeated local 02:00 readings can be distinguished. Local-time-only
+exports lacking an offset remain explicitly quarantined at fall DST. This is a deliberate limit, not proof
 that Fluvius's data is wrong.
 
 Interpretation:

@@ -3,9 +3,9 @@
 This is NOT an official UMIG/MIG6 message format. EAN_ID is an anonymised
 profile label, not proof of a real supply point or a physical meter ID.
 
-All times in the source are treated as Europe/Brussels wall clock. Without
-an offset, the repeated fall-back 02:00 hour cannot be placed reliably on UTC;
-those rows are explicitly quarantined rather than silently shifted.
+Prefer the source's ISO-8601 UTC timestamps (Datum_Startuur with Z). For
+local-time-only variants, the repeated fall-back 02:00 hour is ambiguous and
+quarantined rather than silently shifted.
 """
 
 from __future__ import annotations
@@ -60,7 +60,16 @@ def screen_public_profiles(df: DataFrame) -> PublicProfilesResult:
     missing = sorted(set(PUBLIC_COLUMNS) - set(df.columns))
     if missing:
         raise ValueError("Missing P6269 columns: " + ", ".join(missing))
-    local = _local_timestamp(df)
+    raw_start = F.trim(F.col("Datum_Startuur"))
+    is_explicit = raw_start.rlike(r"(?i)(Z|[+-][0-9]{2}:[0-9]{2})$")
+    # Original P6269 files use UTC ISO-8601 timestamps, e.g.
+    # 2024-01-01T00:15:00.000Z. Do NOT reinterpret those as Belgian wall time.
+    explicit_utc = F.try_to_timestamp(raw_start)
+    local_from_date = _local_timestamp(df)
+    interval_utc = F.when(is_explicit, explicit_utc).otherwise(
+        F.to_utc_timestamp(local_from_date, "Europe/Brussels")
+    )
+    local = F.when(is_explicit, F.from_utc_timestamp(explicit_utc, "Europe/Brussels")).otherwise(local_from_date)
     # EAN_ID is an anonymised profile ID; never validate it as a Belgian EAN.
     value_import = F.try_cast(F.regexp_replace(F.trim(F.col("Volume_Afname_KWh")), ",", "."), "decimal(20,6)") if hasattr(F, 'try_cast') else F.expr("try_cast(replace(trim(Volume_Afname_KWh), ',', '.') as decimal(20,6))")
     value_export = F.expr("try_cast(replace(trim(Volume_Injectie_KWh), ',', '.') as decimal(20,6))")
@@ -68,12 +77,12 @@ def screen_public_profiles(df: DataFrame) -> PublicProfilesResult:
     last_october = F.last_day(F.make_date(F.year(local), F.lit(10), F.lit(1)))
     spring_sunday = F.date_sub(last_march, F.dayofweek(last_march) - F.lit(1))
     autumn_sunday = F.date_sub(last_october, F.dayofweek(last_october) - F.lit(1))
-    spring_gap = (F.to_date(local) == spring_sunday) & (F.hour(local) == 2)
-    autumn_repeat = (F.to_date(local) == autumn_sunday) & (F.hour(local) == 2)
-    invalid_step = (F.minute(local) % F.lit(15) != 0) | (F.second(local) != 0)
+    spring_gap = (~is_explicit) & (F.to_date(local) == spring_sunday) & (F.hour(local) == 2)
+    autumn_repeat = (~is_explicit) & (F.to_date(local) == autumn_sunday) & (F.hour(local) == 2)
+    invalid_step = (F.minute(interval_utc) % F.lit(15) != 0) | (F.second(interval_utc) != 0)
     errors = F.filter(F.array(
         F.when(F.col("EAN_ID").isNull() | (F.length(F.trim("EAN_ID")) == 0), F.lit("MISSING_PUBLIC_PROFILE_ID")),
-        F.when(local.isNull(), F.lit("INVALID_LOCAL_DATETIME")),
+        F.when(interval_utc.isNull(), F.lit("INVALID_SOURCE_DATETIME")),
         F.when(spring_gap, F.lit("NONEXISTENT_BELGIAN_LOCAL_HOUR")),
         F.when(autumn_repeat, F.lit("AMBIGUOUS_BELGIAN_LOCAL_HOUR")),
         F.when(invalid_step, F.lit("UNALIGNED_QUARTER_HOUR")),
@@ -85,7 +94,7 @@ def screen_public_profiles(df: DataFrame) -> PublicProfilesResult:
         .withColumn("import_kwh", value_import)
         .withColumn("injection_kwh", value_export)
         .withColumn("quality_errors", errors)
-        .withColumn("interval_start_utc", F.to_utc_timestamp("local_start_be", "Europe/Brussels"))
+        .withColumn("interval_start_utc", interval_utc)
         .withColumn("interval_end_utc", F.col("interval_start_utc") + F.expr("INTERVAL 15 MINUTES")))
     valid = checked.where(F.size("quality_errors") == 0)
     quarantine = checked.where(F.size("quality_errors") > 0)

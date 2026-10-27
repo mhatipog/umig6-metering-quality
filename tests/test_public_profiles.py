@@ -38,7 +38,7 @@ def test_both_negative_and_missing_values_quarantined(spark):
 
 def test_bad_format_does_not_silently_parse(spark):
     x=screen_public_profiles(sample(spark,("p","nonsense","05:00:00","1.0","0")))
-    assert "INVALID_LOCAL_DATETIME" in x.quarantine.first().quality_errors
+    assert "INVALID_SOURCE_DATETIME" in x.quarantine.first().quality_errors
 
 
 def test_unaligned_quarter(spark):
@@ -49,3 +49,16 @@ def test_unaligned_quarter(spark):
 def test_date_with_slash(spark):
     x=screen_public_profiles(sample(spark,("p","01/02/2024","00:15:00","1.0","0")))
     assert x.valid.count()==1
+
+
+def test_official_iso_utc_timestamps_are_not_shifted(spark):
+    x=screen_public_profiles(sample(spark,("p","2024-01-01","2024-01-01T00:15:00.000Z","0.3","0")))
+    assert x.valid.first().interval_start_utc.isoformat()=="2024-01-01T00:15:00"
+
+
+def test_official_utc_fall_repeated_hour_is_unambiguous(spark):
+    x=screen_public_profiles(sample(spark,
+      ("p","2024-10-27","2024-10-27T00:15:00.000Z","0.3","0"),
+      ("p","2024-10-27","2024-10-27T01:15:00.000Z","0.4","0")))
+    assert x.quarantine.count()==0
+    assert x.valid.count()==2

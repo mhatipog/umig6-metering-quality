@@ -218,7 +218,7 @@ MIT. Not affiliated with Atrias, Fluvius or any energy-market operator.
 
 The [public P6269 profile adapter](docs/public-fluvius-benchmark.md) screens
 all eight official 2024 CSV categories at source-row grain. It uses no private
-CMS data, makes no fabricated physical-meter assumptions, quarantines local
+CMS data, makes no fabricated physical-meter assumptions, preserves source ISO-8601 UTC instants and quarantines local-only
 DST ambiguity and reports source SHA-256 and aggregate quality metrics.
 
 ```python
