@@ -82,8 +82,8 @@ writes are separate Spark actions; they must be timed separately in benchmarks.
 where `timestamp_semantics` and `revision_basis` are entirely absent;
 callers remain responsible for source verification. But **when those columns
 are present**, the engine rejects records that *declare* any
-`timestamp_semantics` other than `UTC_VERIFIED` / `OFFSET_VERIFIED`, or any
-`revision_basis` other than `SOURCE_REVISION`, including nulls.
+`timestamp_semantics` other than `UTC_VERIFIED` / `OFFSET_VERIFIED`, or, in **strict source-replay mode**, any `revision_basis` other than
+`SOURCE_REVISION`, including nulls.
 
 Rejected records retain `UNVERIFIED_UTC_INSTANT` /
 `UNVERIFIED_SOURCE_REVISION` in `quality_errors`. The operation does not
@@ -93,3 +93,16 @@ This is deliberately a source-data-safety check, **not an official UMIG rule**.
 **Never add a fake VERIFIED marker solely to make a pipeline pass.** The
 provenance gate and the upstream verified source contract remain necessary
 for a trusted correction replay.
+
+
+## Snapshot comparison versus official-source correction
+
+The `read_fluvius_csv()` adapter emits `revision_basis=EXPORT_SNAPSHOT`.
+The generic `process_metering()` retains comparison of successive exports:
+its `current` means most recent *snapshot*, not a source-authored UMIG market
+revision. To enforce source corrections instead, set
+`require_source_revision=True` after provenance screening; this rejects
+snapshot/ingestion-time bases and fails if `revision_basis` is absent.
+Any **explicitly declared** unresolved UTC timestamp remains rejected in
+both modes. This keeps existing consumer use cases working while making the
+stronger market-replay contract enforceable.

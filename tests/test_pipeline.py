@@ -251,7 +251,7 @@ def test_declared_unverified_p6269_clock_cannot_enter_revision_current(readings,
     data = readings([make_reading(utc(), revision=utc(2026, 1, 5))])
     data = data.withColumn("timestamp_semantics", F.lit("UTC_LABEL_UNVERIFIED"))
     data = data.withColumn("revision_basis", F.lit("EXPORT_SNAPSHOT"))
-    output = process_metering(data)
+    output = process_metering(data, require_source_revision=True)
     assert output.current.count() == 0
     assert output.rejected.count() == 1
     errors = output.rejected.first().quality_errors
@@ -274,7 +274,7 @@ def test_declared_provenance_null_is_not_accepted(readings, make_reading, utc):
     data = readings([make_reading(utc())])
     data = data.withColumn("timestamp_semantics", F.lit(None).cast("string"))
     data = data.withColumn("revision_basis", F.lit(None).cast("string"))
-    output = process_metering(data)
+    output = process_metering(data, require_source_revision=True)
     assert output.current.count() == 0
     assert "UNVERIFIED_UTC_INSTANT" in output.rejected.first().quality_errors
 
@@ -282,3 +282,24 @@ def test_declared_provenance_null_is_not_accepted(readings, make_reading, utc):
 def test_missing_provenance_columns_preserve_canonical_behavior(readings, make_reading, utc):
     # Backwards compatibility: canonical feeds need a separate provenance gate.
     assert process_metering(readings([make_reading(utc())])).current.count() == 1
+
+
+def test_snapshot_comparison_remains_supported_when_explicitly_not_market_replay(readings, make_reading, utc):
+    from pyspark.sql import functions as F
+    data = readings([
+        make_reading(utc(), "0.25", revision=utc(2026, 1, 3)),
+        make_reading(utc(), "0.30", revision=utc(2026, 1, 4)),
+    ]).withColumn("revision_basis", F.lit("EXPORT_SNAPSHOT"))
+    comparison = process_metering(data)
+    assert comparison.current.count() == 1
+    assert comparison.changes.count() == 1
+    assert comparison.current.first().revision_basis == "EXPORT_SNAPSHOT"
+    audited = process_metering(data, require_source_revision=True)
+    assert audited.current.count() == 0
+    assert audited.rejected.count() == 2
+
+
+def test_strict_source_revision_requires_declared_basis(readings, make_reading, utc):
+    import pytest
+    with pytest.raises(ValueError, match="revision_basis"):
+        process_metering(readings([make_reading(utc())]), require_source_revision=True)

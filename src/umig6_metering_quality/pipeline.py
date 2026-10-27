@@ -103,6 +103,7 @@ def process_metering(
     readings: DataFrame, scopes: DataFrame | None = None, *,
     interval_minutes: int = 15, validate_ean_format: bool = True,
     cache_shared: bool = False,
+    require_source_revision: bool = False,
 ) -> MeteringQualityResult:
     """Validate versioned interval readings without discarding contradictory evidence.
 
@@ -114,6 +115,8 @@ def process_metering(
 
     ``scopes`` is an optional caller-provided point/register coverage contract.
     Gaps are never inferred for dates without explicit coverage scope.
+    With require_source_revision=True, snapshots and ingestion-time ordering
+    cannot be accepted as source-authored correction messages.
     """
     if interval_minutes <= 0 or 1440 % interval_minutes:
         raise ValueError("interval_minutes must be a positive divisor of 1440")
@@ -122,8 +125,9 @@ def process_metering(
 
     checked = _checks(readings, interval_minutes, validate_ean_format)
 
-    # If an adapter *declares* unresolved timestamp/revision semantics,
-    # fail closed: do not select a 'current' market observation from it.
+    # If an adapter *declares* unresolved timestamp semantics,
+    # fail closed. For historical export comparison, SOURCE_REVISION must
+    # be required explicitly; otherwise a snapshot is a comparison, not a market claim.
     # Absence of these optional fields preserves the existing canonical API;
     # regulated pipelines should use screen_source_provenance() before replay.
     explicit_errors = []
@@ -137,10 +141,13 @@ def process_metering(
     if "revision_basis" in readings.columns:
         if not isinstance(readings.schema["revision_basis"].dataType, StringType):
             raise TypeError("revision_basis must be a Spark string")
-        explicit_errors.append(F.when(
-            ~F.coalesce(F.col("revision_basis") == F.lit("SOURCE_REVISION"), F.lit(False)),
-            F.lit("UNVERIFIED_SOURCE_REVISION"),
-        ))
+        if require_source_revision:
+            explicit_errors.append(F.when(
+                ~F.coalesce(F.col("revision_basis") == F.lit("SOURCE_REVISION"), F.lit(False)),
+                F.lit("UNVERIFIED_SOURCE_REVISION"),
+            ))
+    elif require_source_revision:
+        raise ValueError("Source-revision replay requires revision_basis provenance column")
     if explicit_errors:
         declared_errors = F.filter(F.array(*explicit_errors), lambda value: value.isNotNull())
         checked = checked.withColumn("quality_errors", F.concat(F.col("quality_errors"), declared_errors))

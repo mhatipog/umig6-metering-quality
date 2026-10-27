@@ -359,8 +359,20 @@ An additional fail-closed guard applies when optional provenance claims
 are present on the DataFrame passed to `process_metering()`.
 `timestamp_semantics=UTC_LABEL_UNVERIFIED` / `LOCAL_UNRESOLVED`,
 and `revision_basis=EXPORT_SNAPSHOT` / `INGESTION_TIME`,
-lead to rejected records with explicit quality reasons.
+lead to rejected records with explicit quality reasons when
+`require_source_revision=True` is set for market-style replay.
 Older canonical DataFrames without these optional claims remain supported,
 but must be provenance-checked by the caller. The guard is a **project-defined
 technical rule**, not an official MIG6 validity decision. Details:
 [rule provenance](docs/rule-provenance.md).
+
+
+**Source correction replay versus export comparison:** to preserve support
+for legitimate comparison of two Mijn Fluvius exports, the default
+`process_metering()` still accepts `revision_basis=EXPORT_SNAPSHOT` and
+preserves that marker on its output. Those `current/changes` results describe
+the *latest export*, not a MIG6 market correction. Use
+`process_metering(..., require_source_revision=True)` for source-authored
+correction replay. It rejects `EXPORT_SNAPSHOT`, `INGESTION_TIME`, and
+missing/unknown bases. Any explicitly `UTC_LABEL_UNVERIFIED` timestamp is
+quarantined in either mode.
