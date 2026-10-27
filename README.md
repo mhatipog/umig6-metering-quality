@@ -1,6 +1,6 @@
 # UMIG 6 Metering Quality for PySpark
 
-**Audit-ready data quality checks for versioned electricity metering data in Belgian analytics pipelines.**
+**PySpark validation, quarantine, asset-history checks and legacy migration-readiness profiling for Belgian energy data pipelines.**
 
 Built for Spark jobs that ingest meter readings at scale and need to tell a trusted
 record apart from a redelivery, a later correction, a contradictory update or a
@@ -10,6 +10,30 @@ The design follows publicly documented **UMIG 6 / MIG6 metering concepts**:
 measurement identity, validation, estimated versus measured data, and corrections.
 It does **not** parse proprietary CMS payloads, reproduce Atrias internal rules,
 or claim official Atrias or Fluvius certification.
+
+### Beyond metering: v0.3 modules (experimental)
+
+- **Legacy readiness:** `evaluate_readiness(data, "METERING_REPLAY" | "ASSET_HISTORY" | "SUPPLIER_CHANGE")` reports row-level blockers/warnings and a distributed structural readiness score. Missing legacy columns become explicit failures rather than defaults. This is not certified UMIG conformance.
+- **Asset history:** `validate_asset_history(assets)` validates point-to-meter assignment keys and periods. Possible overlapping assignments are separate **review** signals, not automatically rejected.
+- **Cross-dataset check:** `reconcile_metering_assets(readings, accepted_assets)` flags metering observations with zero or multiple matching historical assignments. A temporal range join; filter to relevant slices before running at scale.
+- **Quarantine pattern:** `envelope_quarantine(result.rejected, dataset="metering", batch_id="load_001")` attaches deterministic IDs and produces reason-level counts. Optional `write_delta_batch` demonstrates retryable per-batch Delta writes, **not atomic across two tables**.
+- **Databricks benchmark harness:** `examples/benchmark_spark.py` generates synthetic Spark rows for measuring structural readiness on your cluster. No unverified throughput or Photon performance claims.
+
+```python
+from umig6_metering_quality import (
+    process_metering, evaluate_readiness, validate_asset_history,
+    reconcile_metering_assets, envelope_quarantine,
+)
+
+metering = process_metering(spark.read.table("bronze.metering"))
+assets = validate_asset_history(spark.read.table("bronze.asset_history"))
+readiness = evaluate_readiness(spark.read.table("bronze.old_contracts"), "SUPPLIER_CHANGE")
+linked = reconcile_metering_assets(metering.current, assets.accepted)
+quarantine = envelope_quarantine(metering.rejected, dataset="metering", batch_id="run_001")
+# materialize using your platform's transactional/orchestration conventions
+```
+
+See [legacy migration scenarios](docs/migration-readiness.md), [Azure Databricks + Delta quarantine guidance](docs/databricks.md) and [Databricks batch example](examples/databricks_batch.py).
 
 ### Why this exists
 
@@ -102,10 +126,8 @@ result = process_metering(loaded.readings)
   The exact current exports still need independent verification with authorised
   examples; no consumer data is bundled here.
 
-Try `examples/fluvius_export_pipeline.py` with two CSV exports stored at
-**different immutable paths**. Spark reads lazily: overwriting a path after
-building a DataFrame can corrupt a historical comparison. A Spark cluster,
-not a Mijn Fluvius login or CMS access, is all that is required.
+Try `examples/fluvius_export_pipeline.py` with two CSV exports. A Spark
+cluster, not a My Fluvius login or CMS access, is all that is required.
 
 ### Input contract
 
