@@ -1,10 +1,11 @@
 from umig6_metering_quality.public_profiles import screen_public_profiles, public_profile_metrics
+from pyspark.sql.types import StructType, StructField, StringType
 
 HEADERS=("EAN_ID", "Datum", "Datum_Startuur", "Volume_Afname_KWh", "Volume_Injectie_KWh", "Warmtepomp_Indicator", "Elektrisch_Voertuig_Indicator", "PV_Installatie_Indicator", "Contract_Categorie")
 
 
 def sample(spark, *rows):
-    return spark.createDataFrame([(point,date,hour,used,sent,"0","0","0","residentieel") for point,date,hour,used,sent in rows],list(HEADERS))
+    return spark.createDataFrame([(point,date,hour,used,sent,"0","0","0","residentieel") for point,date,hour,used,sent in rows],StructType([StructField(c, StringType(), True) for c in HEADERS]))
 
 
 def test_valid_quarter_and_belgian_utc_conversion(spark):
