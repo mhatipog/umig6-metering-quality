@@ -32,7 +32,7 @@ jobs:
           BENCH_ENVIRONMENT: github-hosted-ubuntu-spark-local-not-databricks
           PYSPARK_SUBMIT_ARGS: '--driver-memory 3g pyspark-shell'
         run: |
-          python examples/benchmark_public_fluvius.py --max-files 1 --output public-benchmark.json
+          python examples/benchmark_public_fluvius.py --max-files 8 --output public-benchmark.json
       - name: Publish aggregate metrics artifact only
         if: always()
         uses: actions/upload-artifact@v4

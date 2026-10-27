@@ -71,7 +71,7 @@ def screen_public_profiles(df: DataFrame) -> PublicProfilesResult:
     )
     local = F.when(is_explicit, F.from_utc_timestamp(explicit_utc, "Europe/Brussels")).otherwise(local_from_date)
     # EAN_ID is an anonymised profile ID; never validate it as a Belgian EAN.
-    value_import = F.try_cast(F.regexp_replace(F.trim(F.col("Volume_Afname_KWh")), ",", "."), "decimal(20,6)") if hasattr(F, 'try_cast') else F.expr("try_cast(replace(trim(Volume_Afname_KWh), ',', '.') as decimal(20,6))")
+    value_import = F.try_cast(F.regexp_replace(F.trim(F.col("Volume_Afname_KWh")), ",", "."), "decimal(24,9)") if hasattr(F, 'try_cast') else F.expr("try_cast(replace(trim(Volume_Afname_KWh), ',', '.') as decimal(24,9))")
     value_export = F.expr("try_cast(replace(trim(Volume_Injectie_KWh), ',', '.') as decimal(20,6))")
     last_march = F.last_day(F.make_date(F.year(local), F.lit(3), F.lit(1)))
     last_october = F.last_day(F.make_date(F.year(local), F.lit(10), F.lit(1)))
