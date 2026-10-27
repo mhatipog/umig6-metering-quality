@@ -74,3 +74,22 @@ an `EXPORT_SNAPSHOT` is not an official source revision.
 
 All checks are Spark-native projections. The summary aggregate and user output
 writes are separate Spark actions; they must be timed separately in benchmarks.
+
+
+## Additional fail-closed protection in correction replay
+
+`process_metering()` remains compatible with legacy normalized DataFrames
+where `timestamp_semantics` and `revision_basis` are entirely absent;
+callers remain responsible for source verification. But **when those columns
+are present**, the engine rejects records that *declare* any
+`timestamp_semantics` other than `UTC_VERIFIED` / `OFFSET_VERIFIED`, or any
+`revision_basis` other than `SOURCE_REVISION`, including nulls.
+
+Rejected records retain `UNVERIFIED_UTC_INSTANT` /
+`UNVERIFIED_SOURCE_REVISION` in `quality_errors`. The operation does not
+quietly replace an unknown timestamp or export snapshot with a market revision.
+This is deliberately a source-data-safety check, **not an official UMIG rule**.
+
+**Never add a fake VERIFIED marker solely to make a pipeline pass.** The
+provenance gate and the upstream verified source contract remain necessary
+for a trusted correction replay.

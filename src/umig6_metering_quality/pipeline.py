@@ -120,7 +120,31 @@ def process_metering(
     _check_columns(readings, REQUIRED, "readings")
     _check_types(readings)
 
-    checked = _checks(readings, interval_minutes, validate_ean_format).withColumn("_payload_hash", _payload_hash())
+    checked = _checks(readings, interval_minutes, validate_ean_format)
+
+    # If an adapter *declares* unresolved timestamp/revision semantics,
+    # fail closed: do not select a 'current' market observation from it.
+    # Absence of these optional fields preserves the existing canonical API;
+    # regulated pipelines should use screen_source_provenance() before replay.
+    explicit_errors = []
+    if "timestamp_semantics" in readings.columns:
+        if not isinstance(readings.schema["timestamp_semantics"].dataType, StringType):
+            raise TypeError("timestamp_semantics must be a Spark string")
+        explicit_errors.append(F.when(
+            ~F.coalesce(F.col("timestamp_semantics").isin("UTC_VERIFIED", "OFFSET_VERIFIED"), F.lit(False)),
+            F.lit("UNVERIFIED_UTC_INSTANT"),
+        ))
+    if "revision_basis" in readings.columns:
+        if not isinstance(readings.schema["revision_basis"].dataType, StringType):
+            raise TypeError("revision_basis must be a Spark string")
+        explicit_errors.append(F.when(
+            ~F.coalesce(F.col("revision_basis") == F.lit("SOURCE_REVISION"), F.lit(False)),
+            F.lit("UNVERIFIED_SOURCE_REVISION"),
+        ))
+    if explicit_errors:
+        declared_errors = F.filter(F.array(*explicit_errors), lambda value: value.isNotNull())
+        checked = checked.withColumn("quality_errors", F.concat(F.col("quality_errors"), declared_errors))
+    checked = checked.withColumn("_payload_hash", _payload_hash())
     invalid = checked.where(F.size("quality_errors") > 0)
     valid = checked.where(F.size("quality_errors") == 0)
 

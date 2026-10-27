@@ -244,3 +244,41 @@ def test_cached_conflicting_revision_matches_uncached_quarantine(readings, make_
         assert sorted(r.quality_errors for r in cached.rejected.collect()) == sorted(
             r.quality_errors for r in baseline.rejected.collect()
         )
+
+
+def test_declared_unverified_p6269_clock_cannot_enter_revision_current(readings, make_reading, utc):
+    from pyspark.sql import functions as F
+    data = readings([make_reading(utc(), revision=utc(2026, 1, 5))])
+    data = data.withColumn("timestamp_semantics", F.lit("UTC_LABEL_UNVERIFIED"))
+    data = data.withColumn("revision_basis", F.lit("EXPORT_SNAPSHOT"))
+    output = process_metering(data)
+    assert output.current.count() == 0
+    assert output.rejected.count() == 1
+    errors = output.rejected.first().quality_errors
+    assert "UNVERIFIED_UTC_INSTANT" in errors
+    assert "UNVERIFIED_SOURCE_REVISION" in errors
+
+
+def test_verified_declared_source_revision_is_eligible(readings, make_reading, utc):
+    from pyspark.sql import functions as F
+    data = readings([make_reading(utc(), revision=utc(2026, 1, 5))])
+    data = data.withColumn("timestamp_semantics", F.lit("UTC_VERIFIED"))
+    data = data.withColumn("revision_basis", F.lit("SOURCE_REVISION"))
+    output = process_metering(data)
+    assert output.current.count() == 1
+    assert output.rejected.count() == 0
+
+
+def test_declared_provenance_null_is_not_accepted(readings, make_reading, utc):
+    from pyspark.sql import functions as F
+    data = readings([make_reading(utc())])
+    data = data.withColumn("timestamp_semantics", F.lit(None).cast("string"))
+    data = data.withColumn("revision_basis", F.lit(None).cast("string"))
+    output = process_metering(data)
+    assert output.current.count() == 0
+    assert "UNVERIFIED_UTC_INSTANT" in output.rejected.first().quality_errors
+
+
+def test_missing_provenance_columns_preserve_canonical_behavior(readings, make_reading, utc):
+    # Backwards compatibility: canonical feeds need a separate provenance gate.
+    assert process_metering(readings([make_reading(utc())])).current.count() == 1

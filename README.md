@@ -351,3 +351,16 @@ shared-history cache (Spark 4.2.1 local). The raw Fluvius 2024 profiles do
 not include revision history, so performance and correctness of actual CMS
 correction messages remain unverified.
 [Detailed reproducible performance evidence](docs/benchmarking.md).
+
+
+### Explicit unverified timestamps cannot enter correction replay
+
+An additional fail-closed guard applies when optional provenance claims
+are present on the DataFrame passed to `process_metering()`.
+`timestamp_semantics=UTC_LABEL_UNVERIFIED` / `LOCAL_UNRESOLVED`,
+and `revision_basis=EXPORT_SNAPSHOT` / `INGESTION_TIME`,
+lead to rejected records with explicit quality reasons.
+Older canonical DataFrames without these optional claims remain supported,
+but must be provenance-checked by the caller. The guard is a **project-defined
+technical rule**, not an official MIG6 validity decision. Details:
+[rule provenance](docs/rule-provenance.md).
