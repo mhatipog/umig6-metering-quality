@@ -61,3 +61,19 @@ def test_wrong_profile_and_partial_metadata_fail_fast(spark):
         screen_continuous_measures(df, observed_digits_column="observed_digits")
     with pytest.raises(ValueError, match="Missing readout"):
         screen_continuous_measures(df, observed_digits_column="bad", expected_digits_column="expected_digits")
+
+
+def test_legacy_malformed_string_digit_metadata_is_incomplete(spark):
+    from pyspark.sql.types import StringType
+    df = spark.createDataFrame(
+        [(Decimal("1.000000"), "not-a-number", "6")],
+        StructType([
+            StructField("energy_kwh", DecimalType(18, 6), True),
+            StructField("observed_digits", StringType(), True),
+            StructField("expected_digits", StringType(), True),
+        ]),
+    )
+    # Spark 4 and recent Databricks runtimes may enable ANSI cast errors.
+    assert screen_continuous_measures(
+        df, observed_digits_column="observed_digits", expected_digits_column="expected_digits"
+    ).review.count() == 1
