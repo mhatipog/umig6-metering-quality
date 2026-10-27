@@ -56,3 +56,24 @@ from the correction-heavy stateful step on identical source row counts. These
 measure different operations and must **not** be described as a directly
 interchangeable speed comparison. Report source materialization separately.
 Databricks/Photon throughput and cost remain unmeasured.
+
+## Measured baseline after adding the provenance/Bronze stages
+
+Run [40550324856](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40550324856),
+27 October 2026, **one million synthetic readings per stage**. PySpark
+4.2.0, GitHub-hosted Ubuntu local Spark, 8 input partitions, 16 shuffle
+partitions, source materialisation timed separately. These are separate jobs;
+wall-clock times are not necessarily additive for one physical pipeline.
+
+| Stage | Processing seconds | Rows/s | Distinct semantics |
+|---|---:|---:|---|
+| Readiness | 4.469 | 223,772 | Structural schema and values |
+| Pinned UMIG prerequisite screen | 1.164 | 858,854 | No readout digit metadata, so incomplete |
+| Bronze row screen | 1.361 | 734,827 | No dedup, no revision detection |
+| Source provenance gate | 1.851 | 540,149 | Synthetic trusted evidence fields |
+| Correction-aware | 23.428 | 42,685 | Grouping, windowing, conflicting revision checks |
+
+Do **not** claim that Bronze has a 17x faster implementation of correction
+replay: it does different work. The full reconciliation stage is still the
+main measured performance target. Databricks Photon, Oracle compute,
+cost per million rows and production-scale corrections are not measured.

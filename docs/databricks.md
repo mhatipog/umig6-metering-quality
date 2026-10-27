@@ -43,3 +43,33 @@ References:
 - [Azure Databricks validation and quarantine](https://learn.microsoft.com/en-us/azure/databricks/transform/validate)
 - [Lakeflow quarantine pattern](https://learn.microsoft.com/en-us/azure/databricks/ldp/expectation-patterns)
 - [Databricks performance efficiency](https://docs.databricks.com/gcp/en/lakehouse-architecture/performance-efficiency/best-practices)
+
+## Source-certified revision replay and performance stages
+
+Do **not** feed all Bronze records straight into `process_metering()` when
+their revision timestamps are merely ingestion timestamps or when a public
+clock label has not been proven to be UTC. The expanded example in
+[`examples/databricks_batch.py`](../examples/databricks_batch.py) performs:
+
+1. `screen_metering_rows(bronze)` — native Spark row checks without a shuffle;
+   **preserves redeliveries** and quarantines malformed rows early.
+2. `screen_source_provenance(screen.accepted)` — separates review/invalid
+   metadata from source records with a documented timestamp contract.
+3. `process_metering(origin.replay_ready)` — revision-aware processing only
+   where the input source provides an actual `SOURCE_REVISION` timestamp.
+4. Restricted quarantine sinks for input validation, source metadata, review,
+   revision conflicts and asset history; publication barrier outside this library.
+
+This is a *technical evidence contract*. Merely putting `UTC_VERIFIED`
+in a column or entering a plausible source document reference is not proof
+that an operator audited that upstream system. For each source, document
+time-zone and correction precedence with the system owner.
+
+For append-only data with no source revision, the fast Bronze screen is still
+useful. It must not produce a false correction timeline or a certified MIG6
+validation status. The full correction engine can be expensive because it
+must group and order versions to avoid arbitrary choices.
+
+All runs here use synthetic or public data. [Rule provenance](rule-provenance.md)
+explains precisely which controls derive from public UMIG documents and
+which are project-defined checks.

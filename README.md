@@ -244,7 +244,7 @@ full-corpus metrics. These are anonymised *profiles*, not UMIG 6 messages.
 ```python
 from umig6_metering_quality import profile_coverage
 coverage = profile_coverage(checked)
-# Each profile should have 35,136 distinct UTC quarters in 2024.
+# Literal Z-labelled timestamps are NOT unique during the source's fall DST hour.
 problems = coverage.where("coverage_status = 'INCOMPLETE'")
 ```
 
@@ -299,3 +299,23 @@ source contracts, and what PASS does not prove](docs/rule-provenance.md).
 Interval-duration checks are exact to microseconds and non-finite energy
 values are rejected. These are **technical data-quality rules**, not published
 MIG6 rectification codes or grid-operator validation thresholds.
+
+### Fast Bronze screening versus revision replay
+
+```python
+from umig6_metering_quality import screen_metering_rows, screen_source_provenance, process_metering
+
+bronze = screen_metering_rows(normalized_readings)
+origin = screen_source_provenance(bronze.accepted)
+# The remaining rows are withheld for review/quarantine, not silently deleted.
+replay = process_metering(origin.replay_ready)
+```
+
+This separates cheap structural checks from evidence gating and the
+expensive distributed correction replay. `screen_metering_rows()` does
+**not** deduplicate source rows or certify migrated data. Keep its quarantine,
+the provenance review/quarantine, and the revision-replay outputs as distinct
+Delta sinks with an explicit completion barrier.
+
+The [measured benchmark stages](docs/benchmarking.md) are **different
+operations**: a fast pre-screen does not replace correction validation.
