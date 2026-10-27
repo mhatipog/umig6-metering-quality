@@ -84,3 +84,29 @@ stream. It does **not** claim the report contains UMIG messages.
   accepted. Other meters/units are not converted silently.
 - The entire process remains a distributed Spark transformation. Paths and
   provenance should stay inside access-controlled environments.
+
+## Provenance before Silver correction replay (v0.7)
+
+```text
+Immutable Bronze with source originals
+  -> screen_metering_rows         : row-level technical validity
+      | invalid -> quarantine
+      -> screen_source_provenance : origin / clock / revision evidence
+          | incomplete -> review  | conflicting metadata -> quarantine
+          -> analytics_ready
+             | only SOURCE_REVISION + typed version timestamp -> replay_ready
+                 -> process_metering (optional shared Spark cache)
+                     -> current / rejected / superseded / changes
+```
+
+The `TECH_SOURCE_PROVENANCE_V1` profile is deliberately a **project rule**,
+not an Atrias validation or certification step. Ingestion time and successive
+consumer exports are not equivalent to source-authored revisions. Presence
+of an `UTC_VERIFIED` marker is only a caller assertion until the source
+contract has been independently reviewed.
+
+The revision resolver intentionally collapses *business-identical* redeliveries.
+It does not retain every delivery's separate metadata in `current` or
+`superseded`. Full traceability therefore requires retaining the original
+immutable Bronze feed, along with its load and source IDs; do not describe
+deduplicated Silver as a complete delivery audit log.

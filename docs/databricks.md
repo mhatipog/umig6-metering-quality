@@ -73,3 +73,20 @@ must group and order versions to avoid arbitrary choices.
 All runs here use synthetic or public data. [Rule provenance](rule-provenance.md)
 explains precisely which controls derive from public UMIG documents and
 which are project-defined checks.
+
+### Multi-sink Spark caching (optional, v0.7)
+
+Correction replay shares expensive version deduplication and matching across
+the four output DataFrames. On Spark local, materialising every sink can
+recompute the common history. `process_metering(..., cache_shared=True)`
+caches shared frames with `MEMORY_AND_DISK`; use a `with` statement or
+call `release_cache()` after **all** sinks are complete. The option is
+**off by default** to avoid unplanned cluster memory pressure.
+
+In [the measured four-sink run](benchmarking.md), 8-partition runtime fell
+from 40.693 s to 25.281 s for one million uniquely keyed synthetic rows.
+This is not a Photon result and is no substitute for repeated measurements
+of spill, memory, shuffle and CU cost on your target cluster.
+
+Use a batch completion marker after independent Delta writes; caching
+does not make them atomic and does not change correction precedence.

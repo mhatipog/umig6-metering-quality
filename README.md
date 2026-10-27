@@ -319,3 +319,24 @@ Delta sinks with an explicit completion barrier.
 
 The [measured benchmark stages](docs/benchmarking.md) are **different
 operations**: a fast pre-screen does not replace correction validation.
+
+### v0.7: provenance-first ingestion and repeatable Spark benchmarking
+
+- Source provenance and MIG6-rule provenance are separately documented:
+  [evidence register](docs/rule-provenance.md), pinned UMIG handbook profile
+  versus **project-defined** legacy quality rules.
+- Legacy Bronze snapshots can be screened even if they do not contain a
+  revision timestamp; absence remains NULL and is never invented.
+- Exact UTC interval-duration and nonfinite kWh checks, including the
+  legacy migration-readiness preflight.
+- No local reporting-date enrichment occurs before timestamp provenance
+  screening in the fast Bronze stage.
+- An opt-in `cache_shared=True` full correction path saves repeated Spark
+  work when a caller materialises multiple sinks, with
+  `result.release_cache()` or a context manager for cleanup.
+- The [complete four-output benchmark](docs/benchmarking.md) is measured
+  separately from the simpler two-output benchmark. Revision collisions
+  and Spark 3.5 / 4.2 compatibility are tested independently.
+
+This is not an Atrias-certified package, and no private MIG6 exchange feed
+has been used to validate market-message conformance.

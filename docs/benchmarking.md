@@ -77,3 +77,48 @@ Do **not** claim that Bronze has a 17x faster implementation of correction
 replay: it does different work. The full reconciliation stage is still the
 main measured performance target. Databricks Photon, Oracle compute,
 cost per million rows and production-scale corrections are not measured.
+
+## Full four-output correction replay and intermediate persistence
+
+[Run 40551220098](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40551220098)
+materialised `current`, `rejected`, `superseded` and `changes` on
+1,000,000 uniquely keyed synthetic readings. Spark 4.2.0, GitHub-hosted
+local mode (not Databricks): 8 shuffle partitions **55.100 s**, 32 shuffle
+partitions **58.729 s**. The historical 23.428-second measurement
+materialised only `current` and `rejected`: it was **not** full output
+materialisation.
+
+After introducing opt-in `cache_shared=True`,
+[run 40551920250](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40551920250)
+measured all four outputs, including cache release, on Spark 4.2.1:
+
+| Mode | Shuffle partitions | Seconds | Rows per second |
+|---|---:|---:|---:|
+| No shared cache | 8 | 40.693 | 24,574 |
+| Persist shared history, release after use | 8 | 25.281 | 39,556 |
+| Persist shared history, release after use | 32 | 21.931 | 45,597 |
+
+At the same 8-partition setting caching reduced wall time by approximately
+38% for this test. The independent GitHub-hosted runners and Spark patch
+versions prevent treating this as a general Databricks/Photon guarantee.
+Runs above contain **unique** interval keys; additional runs with deliberate
+source revisions must be interpreted separately.
+
+When `cache_shared=True`, the library persists the shared Spark version
+table and the safely annotated correction history using
+`MEMORY_AND_DISK`. A caller must materialise all outputs **and then**
+release the persisted intermediate data:
+
+```python
+with process_metering(source_revisions, cache_shared=True) as result:
+    result.current.write.format("delta").mode("append").saveAsTable("silver.current")
+    result.rejected.write.format("delta").mode("append").saveAsTable("ops.rejected")
+    result.superseded.write.format("delta").mode("append").saveAsTable("ops.superseded")
+    result.changes.write.format("delta").mode("append").saveAsTable("ops.changes")
+```
+
+These writes are independent and not idempotent as written; use the
+versioned batch/transaction barrier pattern for real jobs. The example is
+only to demonstrate the cache lifecycle, **not** production persistence
+semantics. Cache memory, spill and node cost require validation on the
+target Databricks workload.
