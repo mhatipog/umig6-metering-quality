@@ -60,9 +60,9 @@ def _checks(df: DataFrame, interval_minutes: int, validate_ean_format: bool) -> 
         | F.col("interval_end_utc").isNull()
         | (F.col("interval_end_utc") <= F.col("interval_start_utc"))
     )
-    seconds = F.unix_timestamp("interval_end_utc") - F.unix_timestamp("interval_start_utc")
-    unexpected_duration = seconds != F.lit(interval_minutes * 60)
-    bad_energy = F.col("energy_kwh").isNull() | F.isnan(F.col("energy_kwh").cast("double")) | (F.col("energy_kwh") < 0)
+    duration_microseconds = F.unix_micros("interval_end_utc") - F.unix_micros("interval_start_utc")
+    unexpected_duration = duration_microseconds != F.lit(interval_minutes * 60 * 1_000_000)
+    bad_energy = F.col("energy_kwh").isNull() | F.isnan(F.col("energy_kwh").cast("double")) | (F.abs(F.col("energy_kwh").cast("double")) == F.lit(float("inf"))) | (F.col("energy_kwh") < 0)
     missing_method = F.col("measurement_method").isNull() | (F.length(F.trim("measurement_method")) == 0)
     invalid_ean = (~F.col("ean").rlike(r"^54[0-9]{16}$")) & F.col("ean").isNotNull()
     reasons = F.array(

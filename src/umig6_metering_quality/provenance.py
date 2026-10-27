@@ -121,7 +121,7 @@ def screen_source_provenance(readings: DataFrame) -> SourceProvenanceResult:
     summary = evaluated.groupBy("provenance_profile_id").agg(
         F.count("*").alias("rows_checked"),
         F.sum(F.when(F.col("provenance_status") == "PASS", 1).otherwise(0)).alias("analytics_ready_rows"),
-        F.sum(F.when("source_revision_replay_ready", 1).otherwise(0)).alias("replay_ready_rows"),
+        F.sum(F.when(F.col("source_revision_replay_ready"), 1).otherwise(0)).alias("replay_ready_rows"),
         F.sum(F.when(F.col("provenance_status") == "INCOMPLETE", 1).otherwise(0)).alias("review_rows"),
         F.sum(F.when(F.col("provenance_status") == "FAIL", 1).otherwise(0)).alias("quarantine_rows"),
     )

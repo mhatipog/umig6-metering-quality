@@ -29,3 +29,6 @@ __all__ += ["profile_coverage"]
 
 from .local_clock import profile_local_clock_coverage
 __all__ += ['profile_local_clock_coverage']
+
+from .provenance import SourceProvenanceResult, screen_source_provenance
+__all__ += ["SourceProvenanceResult", "screen_source_provenance"]

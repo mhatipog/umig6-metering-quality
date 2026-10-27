@@ -272,3 +272,30 @@ happens if the source's UTC suffix is interpreted literally. These are
 from 51.415 s for row-level screening (GitHub-hosted PySpark 4.2.0).
 [Reproducible run](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40529787949).
 The entire eight-category clock audit is a separate benchmark.
+
+### Source provenance and legacy MIG-readiness gate
+
+For versioned metering and legacy system migrations, use the technical
+`screen_source_provenance()` gate **before** time-based joins or revision
+deduplication. It separates source-timestamp claims from verified UTC instants
+and export/ingestion timestamps from source-authored revisions:
+
+```python
+from umig6_metering_quality import screen_source_provenance, process_metering
+
+evidence = screen_source_provenance(bronze_with_origin_metadata)
+evidence.review.write.format("delta").mode("append").saveAsTable("quality.provenance_review")
+evidence.quarantine.write.format("delta").mode("append").saveAsTable("quality.provenance_quarantine")
+result = process_metering(evidence.replay_ready)
+```
+
+The adapter/operator must explicitly supply `source_system`,
+`source_record_id`, `source_evidence_ref`, `timestamp_semantics` and
+`revision_basis`. Only source revisions with non-null `revision_at_utc`
+are replay eligible. P6269's ambiguous UTC-labelled timestamps are
+**not** eligible for trusted UTC joins. See [rule provenance,
+source contracts, and what PASS does not prove](docs/rule-provenance.md).
+
+Interval-duration checks are exact to microseconds and non-finite energy
+values are rejected. These are **technical data-quality rules**, not published
+MIG6 rectification codes or grid-operator validation thresholds.
