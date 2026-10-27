@@ -340,3 +340,13 @@ operations**: a fast pre-screen does not replace correction validation.
 
 This is not an Atrias-certified package, and no private MIG6 exchange feed
 has been used to validate market-message conformance.
+
+
+**Measured correction replay with real revision conflicts?** No: the latest
+source-revision performance case is still *synthetic*, although it contains
+98,304 revised observations with changed kWh. At 8 shuffle partitions,
+four-output runtime was 59.418 s uncached versus 32.426 s with an opt-in
+shared-history cache (Spark 4.2.1 local). The raw Fluvius 2024 profiles do
+not include revision history, so performance and correctness of actual CMS
+correction messages remain unverified.
+[Detailed reproducible performance evidence](docs/benchmarking.md).
