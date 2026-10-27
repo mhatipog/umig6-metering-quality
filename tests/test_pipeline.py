@@ -174,3 +174,27 @@ def test_silver_enrichment_preserves_utc_and_derives_local_month(readings, make_
     record = result.current.first()
     assert record.local_month_be == "2026-01"
     assert str(record.avg_power_kw) == "1.000000"
+
+
+def test_fractional_second_duration_is_not_silently_rounded(readings, make_reading, utc):
+    t = utc()
+    row = make_reading(t, end=t + timedelta(minutes=15, microseconds=1))
+    result = process_metering(readings([row]))
+    assert result.current.count() == 0
+    assert "UNEXPECTED_INTERVAL_DURATION" in result.rejected.first().quality_errors
+
+
+def test_nonfinite_metering_value_is_quarantined(spark, utc):
+    # Use a floating-point source feed to represent unsafe infinity.
+    from pyspark.sql.types import StructType, StructField, StringType, TimestampType, DoubleType
+    t = utc()
+    schema = StructType([
+        StructField("ean", StringType()), StructField("meter_id", StringType()),
+        StructField("register", StringType()), StructField("interval_start_utc", TimestampType()),
+        StructField("interval_end_utc", TimestampType()), StructField("energy_kwh", DoubleType()),
+        StructField("revision_at_utc", TimestampType()), StructField("measurement_method", StringType()),
+    ])
+    data = spark.createDataFrame([
+        ("541440000000000000", "TEST", "A+", t, t + timedelta(minutes=15), float("inf"), None, "MEASURED"),
+    ], schema)
+    assert "INVALID_ENERGY_VALUE" in process_metering(data).rejected.first().quality_errors
