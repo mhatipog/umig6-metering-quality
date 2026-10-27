@@ -33,9 +33,9 @@ def profile_local_clock_coverage(checked: PublicProfilesResult, *, year: int = 2
     raw_time = F.trim("Datum_Startuur")
     label_day = F.substring(raw_time, 1, 10)
     clock_slot = F.regexp_extract(
-        raw_time, r"^\\d{4}-\\d{2}-\\d{2}T(\\d{2}:\\d{2}):\\d{2}(?:\\.\\d+)?Z$", 1
+        raw_time, r"^\d{4}-\d{2}-\d{2}T(\d{2}:\d{2}):\d{2}(?:\.\d+)?Z$", 1
     )
-    clock_pattern = r"^(?:[01]\\d|2[0-3]):(?:00|15|30|45)$"
+    clock_pattern = r"^(?:[01]\d|2[0-3]):(?:00|15|30|45)$"
     day = F.to_date("Datum", "yyyy-MM-dd")
     input_rows = source.select(
         F.col("profile_id"),
@@ -88,7 +88,7 @@ def profile_local_clock_coverage(checked: PublicProfilesResult, *, year: int = 2
     profiles = days.groupBy("profile_id").agg(
         F.count("*").alias("observed_days"),
         F.sum("observed_rows").alias("observed_rows"),
-        F.sum(F.when("incomplete_day", 1).otherwise(0)).alias("incomplete_days"),
+        F.sum(F.when(F.col("incomplete_day"), 1).otherwise(0)).alias("incomplete_days"),
         F.sum("invalid_clock_slots").alias("invalid_clock_slots"),
         F.sum("invalid_source_rows").alias("invalid_source_rows"),
         F.min("source_day").alias("first_local_day"),
