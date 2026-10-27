@@ -223,7 +223,7 @@ No claims about Databricks or actual CMS conformance are implied.
 
 The [public P6269 profile adapter](docs/public-fluvius-benchmark.md) screens
 all eight official 2024 CSV categories at source-row grain. It uses no private
-CMS data, makes no fabricated physical-meter assumptions, preserves source ISO-8601 UTC instants and quarantines local-only
+CMS data, makes no fabricated physical-meter assumptions, preserves source timestamp strings, explicitly flags unverified UTC labels, and quarantines local-only
 DST ambiguity and reports source SHA-256 and aggregate quality metrics.
 
 ```python
@@ -376,3 +376,27 @@ the *latest export*, not a MIG6 market correction. Use
 correction replay. It rejects `EXPORT_SNAPSHOT`, `INGESTION_TIME`, and
 missing/unknown bases. Any explicitly `UTC_LABEL_UNVERIFIED` timestamp is
 quarantined in either mode.
+
+
+### v0.8: explicit clock and source-revision safeguards
+
+- A declared unresolved timestamp (`UTC_LABEL_UNVERIFIED`,
+  `LOCAL_UNRESOLVED`, `UNKNOWN`, or null) is rejected from
+  `process_metering()` with `UNVERIFIED_UTC_INSTANT`, rather than being
+  labelled a trusted current UTC observation.
+- **Strict market-style correction replay:** use
+  `process_metering(source, require_source_revision=True)`; it requires
+  `revision_basis=SOURCE_REVISION` on every accepted record and fails closed
+  if the column is absent.
+- **Consumer export comparisons stay supported:** the default still permits
+  clearly labelled `EXPORT_SNAPSHOT` ordering. These change reports do
+  **not** claim official MIG6 correction processing.
+- Real P6269 quality metrics remain local-clock-specific; a source timestamp
+  ending in `Z` is not necessarily an independently verified UTC instant.
+- CI covers PySpark 3.5.5 and 4.2.1. Additional performance results for the
+  provenance gate are in [benchmarks](docs/benchmarking.md).
+
+For an authorised MDM/CMS migration, first run
+`screen_source_provenance()`, then pass only `replay_ready` rows to
+`process_metering(..., require_source_revision=True)`. Preserve the
+original Bronze messages and separate quarantine and review outputs.

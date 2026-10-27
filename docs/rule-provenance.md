@@ -66,7 +66,7 @@ screen.quarantine.write.format("delta").mode("append").saveAsTable("dq.provenanc
 
 # Only if the referenced upstream source contract was independently checked:
 trusted_revisions = screen.replay_ready
-metering = process_metering(trusted_revisions)
+metering = process_metering(trusted_revisions, require_source_revision=True)
 ```
 
 Do not run the revision engine on `screen.analytics_ready` indiscriminately:

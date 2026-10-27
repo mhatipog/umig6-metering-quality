@@ -110,3 +110,17 @@ It does not retain every delivery's separate metadata in `current` or
 `superseded`. Full traceability therefore requires retaining the original
 immutable Bronze feed, along with its load and source IDs; do not describe
 deduplicated Silver as a complete delivery audit log.
+
+
+## v0.8 operational contract
+
+A consumer export's `EXPORT_SNAPSHOT` timestamp may legitimately be used to
+compare two immutable snapshots, but the result is **not** a market correction.
+Use `require_source_revision=True` for a pipeline intended to replay
+source-authored correction histories after `screen_source_provenance()`.
+The resolver then refuses export and ingestion timestamps as revision
+authority. Rows declaring unverified UTC semantics are rejected in both modes.
+
+Do not use any data-quality `PASS` as evidence that Atrias or a distribution
+grid operator validated the corresponding market message. The public P6269
+dataset contains source clock labels, not market-message revision histories.

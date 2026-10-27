@@ -15,7 +15,7 @@ The `corrections` workload materialises two sinks, and Spark may repeat parts of
 
 Fluvius publishes a [dataset of 2,400 anonymised full-year residential quarter-hour series](https://opendata.fluvius.be/explore/dataset/1_50-verbruiksprofielen-dm-elek-kwartierwaarden-voor-een-volledig-jaar/), with ZIP attachments `P6269_1_50_DMK_Sample_Elek_2024_Deel_1.zip` and `Deel_2.zip`, plus a separate legend. **These public files are not MIG6 messages, and must not be confused with production CMS exports.**
 
-Before benchmarking on the public corpus, download the files from Fluvius, verify the legend and actual schema, document units, measurement interval and time zone, and implement a dataset-specific adapter. Do not invent EAN/asset identities or validation statuses for the public sample. Report source checksum, record count, missing periods and Spark job/environment metadata. No actual Fluvius benchmark is claimed by this repository yet.
+Before benchmarking on the public corpus, download the files from Fluvius, verify the legend and actual schema, document units, measurement interval and time zone, and implement a dataset-specific adapter. Do not invent EAN/asset identities or validation statuses for the public sample. Report source checksum, record count, missing periods and Spark job/environment metadata. A full 84,326,400-row P6269 benchmark has since been completed, as documented in [public-fluvius-benchmark.md](public-fluvius-benchmark.md). It is not a real CMS revision-feed benchmark.
 
 ## Databricks
 
@@ -167,3 +167,30 @@ PySpark 3.5.5 and 4.2.1 in
 [CI run 40553118855](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40553118855):
 86 tests passed on each. Databricks Runtime/Photon performance and historical
 UMIG message conformance are separate, unverified production concerns.
+
+
+## v0.8 — stricter provenance checks, same four-output correction workload
+
+Verified [GitHub Actions run 40556512040](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40556512040).
+A single GitHub-hosted Ubuntu runner used PySpark **4.2.1**, local execution,
+8 input and shuffle partitions, and one million synthetic observation rows
+with `--revisions-every 10`. The source was materialized before the timing.
+Both cases evaluated **all four outputs** (`current`, `rejected`,
+`superseded`, `changes`) and released the shared Spark cache.
+
+| Case | Wall time | Current | Superseded | Changed | Rejected |
+|---|---:|---:|---:|---:|---:|
+| Cached revision replay, no source provenance columns | 32.334 s | 901,696 | 98,304 | 98,304 | 0 |
+| Cached replay with declared `UTC_VERIFIED` and `SOURCE_REVISION` under strict mode | 31.110 s | 901,696 | 98,304 | 98,304 | 0 |
+
+The **1.224-second difference is within plausible runner variation**. It
+is **not** a statistically established acceleration. This is one run per
+configuration and measures only the checks on declared provenance columns;
+it does **not** independently verify source documentation, simulate quarantine
+writes, or benchmark real MIG6/CMS corrections or Azure Databricks Photon.
+
+To reproduce, run
+`examples/benchmark_spark.py --rows 1000000 --partitions 8 --shuffle-partitions 8 --revisions-every 10`
+with `--workload corrections-full-cached` and then
+`--workload corrections-full-cached-evidenced`.
+The second workload sets `require_source_revision=True`.
