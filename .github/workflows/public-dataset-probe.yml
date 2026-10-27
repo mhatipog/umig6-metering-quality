@@ -9,28 +9,47 @@ permissions:
 jobs:
   inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     steps:
-      - name: Inspect public Fluvius dataset metadata
+      - name: Inspect official archive structure and metadata
         shell: bash
         run: |
           python - <<'PY'
-          import json, urllib.request
-          dataset="1_50-verbruiksprofielen-dm-elek-kwartierwaarden-voor-een-volledig-jaar"
-          roots=["https://opendata.fluvius.be", "https://fluvius.opendatasoft.com"]
-          paths=[f"/api/explore/v2.1/catalog/datasets/{dataset}",f"/api/explore/v2.1/catalog/datasets/{dataset}/attachments",f"/api/v2/catalog/datasets/{dataset}"]
-          for root in roots:
-              for path in paths:
-                  url=root+path
-                  print("TRY",url,flush=True)
-                  try:
-                      request=urllib.request.Request(url,headers={"User-Agent":"umig6-metering-quality/0.5 (open benchmark, contact via GitHub)", "Accept":"application/json"})
-                      with urllib.request.urlopen(request,timeout=12) as response:
-                          data=json.load(response)
-                      print("OK top-level keys",list(data)[:18],flush=True)
-                      print("ATTACHMENTS",json.dumps(data.get("attachments",data.get("metas",{}).get("attachments",[])),ensure_ascii=False)[:14000],flush=True)
-                      if isinstance(data,list):
-                          print("ITEMS",json.dumps(data[:6],ensure_ascii=False)[:14000],flush=True)
-                  except Exception as e:
-                      print("ERROR",type(e).__name__,str(e)[:220],flush=True)
+          import hashlib, json, pathlib, urllib.request, zipfile
+          ds="1_50-verbruiksprofielen-dm-elek-kwartierwaarden-voor-een-volledig-jaar"
+          endpoint=f"https://opendata.fluvius.be/api/explore/v2.1/catalog/datasets/{ds}"
+          with urllib.request.urlopen(endpoint,timeout=25) as response:
+              data=json.load(response)
+          print("DATASET",ds,"attachments:",len(data.get("attachments",[])),flush=True)
+          for attachment in data.get("attachments",[]):
+              if attachment.get("mimetype")!="application/zip": continue
+              print("ARCHIVE",attachment["title"],flush=True)
+              request=urllib.request.Request(attachment["url"],headers={"User-Agent":"Open-MIG6-Quality-Benchmark/0.5"})
+              target=pathlib.Path("/tmp")/attachment["title"]
+              h=hashlib.sha256()
+              size=0
+              with urllib.request.urlopen(request,timeout=60) as response, open(target,"wb") as out:
+                  print("CONTENT LENGTH",response.headers.get("Content-Length"),flush=True)
+                  while True:
+                      part=response.read(2*1024*1024)
+                      if not part:break
+                      size+=len(part)
+                      if size>1_600_000_000:
+                          raise ValueError("Attachment larger than safety cap 1.6 GB")
+                      h.update(part);out.write(part)
+              print("ARCHIVE SAVED",size,"SHA256",h.hexdigest(),flush=True)
+              with zipfile.ZipFile(target) as archive:
+                  entries=archive.infolist()
+                  print("ZIP MEMBERS",len(entries),"sum_uncompressed_bytes",sum(x.file_size for x in entries),flush=True)
+                  for info in entries[:15]:
+                      print("MEMBER",info.filename,info.file_size,flush=True)
+                  for info in entries:
+                      if info.is_dir() or info.file_size==0:continue
+                      if info.filename.lower().endswith((".csv",".txt")):
+                          with archive.open(info) as stream:
+                              for n in range(3):
+                                  row=stream.readline().decode("utf-8-sig",errors="replace")
+                                  print("CSV LINE",n+1,"size",len(row),"semicolons",row.count(";"),"commas",row.count(","),"pipes",row.count("|"),flush=True)
+                          break
+              target.unlink()
           PY
