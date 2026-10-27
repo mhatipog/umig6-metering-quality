@@ -18,3 +18,8 @@ from .rulebook import (RuleProfile, PROFILES, UMIG_ME_6522_PREREQUISITES,
                        ContinuousScreenResult, screen_continuous_measures)
 __all__ += ["RuleProfile", "PROFILES", "UMIG_ME_6522_PREREQUISITES",
             "ContinuousScreenResult", "screen_continuous_measures"]
+
+from .public_profiles import (
+    PublicProfilesResult, read_public_profiles, screen_public_profiles, public_profile_metrics,
+)
+__all__ += ["PublicProfilesResult", "read_public_profiles", "screen_public_profiles", "public_profile_metrics"]

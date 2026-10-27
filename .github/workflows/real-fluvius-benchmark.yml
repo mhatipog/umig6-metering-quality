@@ -1,0 +1,43 @@
+name: Public Fluvius real-data benchmark
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'src/umig6_metering_quality/public_profiles.py'
+      - 'examples/benchmark_public_fluvius.py'
+      - '.github/workflows/real-fluvius-benchmark.yml'
+permissions:
+  contents: read
+concurrency:
+  group: fluvius-real-benchmark
+  cancel-in-progress: false
+jobs:
+  validate-public-profiles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 175
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Benchmark against official Fluvius 2024 ZIP attachments
+        env:
+          SPARK_LOCAL_IP: 127.0.0.1
+          BENCH_ENVIRONMENT: github-hosted-ubuntu-spark-local-not-databricks
+          PYSPARK_SUBMIT_ARGS: '--driver-memory 3g pyspark-shell'
+        run: |
+          python examples/benchmark_public_fluvius.py --max-files 1 --output public-benchmark.json
+      - name: Publish aggregate metrics artifact only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-fluvius-aggregate-benchmark
+          path: public-benchmark.json
+          if-no-files-found: ignore
+          retention-days: 30

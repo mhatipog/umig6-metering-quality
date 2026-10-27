@@ -193,7 +193,7 @@ limitations and code examples.
 A reproducible synthetic benchmark now covers readiness, this pinned rulebook,
 and the full correction pipeline. The benchmark workflow records its environment
 and plan fingerprint; it is **not** an Azure Databricks or live Fluvius
-performance result. See [`docs/benchmarking.md`](docs/benchmarking.md). A measured one-million-row Spark 4.2 baseline is published there, with the exact run and limitations.
+performance result. See [`docs/benchmarking.md`](docs/benchmarking.md).
 
 ### Documentation used
 
@@ -213,3 +213,23 @@ Do not upload customer meter readings or confidential company documentation.
 ### License
 
 MIT. Not affiliated with Atrias, Fluvius or any energy-market operator.
+
+### Real Fluvius 2024 data benchmark
+
+The [public P6269 profile adapter](docs/public-fluvius-benchmark.md) screens
+all eight official 2024 CSV categories at source-row grain. It uses no private
+CMS data, makes no fabricated physical-meter assumptions, quarantines local
+DST ambiguity and reports source SHA-256 and aggregate quality metrics.
+
+```python
+from umig6_metering_quality.public_profiles import (
+    read_public_profiles, screen_public_profiles, public_profile_metrics,
+)
+checked = screen_public_profiles(read_public_profiles(spark, "/mnt/P6269_sample.csv"))
+checked.valid.write.format("delta").saveAsTable("quality.public_profiles_valid")
+checked.quarantine.write.format("delta").saveAsTable("quality.public_profiles_quarantine")
+public_profile_metrics(checked).show()
+```
+
+Run `python examples/benchmark_public_fluvius.py --max-files 8` for reproducible
+full-corpus metrics. These are anonymised *profiles*, not UMIG 6 messages.
