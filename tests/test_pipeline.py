@@ -212,3 +212,18 @@ def test_conflicting_intermediate_revision_blocks_inferred_change(readings, make
     assert str(result.current.first().energy_kwh) == "0.400000"
     assert result.rejected.count() == 2
     assert result.changes.count() == 0  # Unresolved history is not a known transition
+
+
+def test_cached_revision_matches_uncached_across_four_outputs(readings, make_reading, utc):
+    t = utc()
+    data = readings([
+        make_reading(t, "0.200000", revision=utc(2026, 1, 3)),
+        make_reading(t, "0.300000", revision=utc(2026, 1, 4)),
+        make_reading(t + timedelta(minutes=15), "-1.000000", revision=utc(2026, 1, 4)),
+    ])
+    baseline = process_metering(data)
+    expected = _count(baseline)
+    with process_metering(data, cache_shared=True) as cached:
+        assert _count(cached) == expected
+        assert cached.changes.count() == baseline.changes.count()
+        assert len(cached._cached) == 2
