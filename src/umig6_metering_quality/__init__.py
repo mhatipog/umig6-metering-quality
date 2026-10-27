@@ -26,3 +26,6 @@ __all__ += ["PublicProfilesResult", "read_public_profiles", "screen_public_profi
 
 from .public_profiles import profile_coverage
 __all__ += ["profile_coverage"]
+
+from .local_clock import profile_local_clock_coverage
+__all__ += ['profile_local_clock_coverage']

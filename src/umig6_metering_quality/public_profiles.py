@@ -94,6 +94,7 @@ def screen_public_profiles(df: DataFrame) -> PublicProfilesResult:
         .withColumn("import_kwh", value_import)
         .withColumn("injection_kwh", value_export)
         .withColumn("quality_errors", errors)
+        .withColumn("source_utc_label_unverified", F.lit(True))
         .withColumn("interval_start_utc", interval_utc)
         .withColumn("interval_end_utc", F.col("interval_start_utc") + F.expr("INTERVAL 15 MINUTES")))
     valid = checked.where(F.size("quality_errors") == 0)

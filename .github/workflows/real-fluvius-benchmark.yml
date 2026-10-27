@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'src/umig6_metering_quality/public_profiles.py'
+      - 'src/umig6_metering_quality/local_clock.py'
       - 'examples/benchmark_public_fluvius.py'
       - '.github/workflows/real-fluvius-benchmark.yml'
 permissions:
@@ -32,7 +33,7 @@ jobs:
           BENCH_ENVIRONMENT: github-hosted-ubuntu-spark-local-not-databricks
           PYSPARK_SUBMIT_ARGS: '--driver-memory 3g pyspark-shell'
         run: |
-          python examples/benchmark_public_fluvius.py --max-files 8 --check-coverage --output public-benchmark.json
+          python examples/benchmark_public_fluvius.py --max-files 8 --check-coverage --check-local-clock --output public-benchmark.json
       - name: Publish aggregate metrics artifact only
         if: always()
         uses: actions/upload-artifact@v4

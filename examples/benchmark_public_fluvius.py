@@ -19,6 +19,7 @@ import urllib.request
 import zipfile
 
 from pyspark.sql import SparkSession
+from umig6_metering_quality.local_clock import profile_local_clock_coverage
 from umig6_metering_quality.public_profiles import (
     DATASET_ID, read_public_profiles, screen_public_profiles, public_profile_metrics, profile_coverage,
 )
@@ -54,7 +55,7 @@ def download(attachment, dest: Path):
     return {"archive": attachment["title"], "bytes": size, "sha256": h.hexdigest()}
 
 
-def benchmark(spark, output_path: str, *, max_files: int = 8, check_coverage: bool = False):
+def benchmark(spark, output_path: str, *, max_files: int = 8, check_coverage: bool = False, check_local_clock: bool = False):
     spark.conf.set("spark.sql.session.timeZone", "UTC")
     results = []
     archive_checksums = []
@@ -114,6 +115,21 @@ def benchmark(spark, output_path: str, *, max_files: int = 8, check_coverage: bo
                             "duplicate_quarters": int(coverage_summary.duplicate_quarters),
                             "seconds": round(time.perf_counter() - coverage_started, 3),
                         }
+                    if check_local_clock:
+                        local_started = time.perf_counter()
+                        from pyspark.sql import functions as F
+                        local_summary = profile_local_clock_coverage(checked).agg(
+                            F.count('*').alias('profiles'),
+                            F.sum(F.when(F.col('local_clock_coverage_status') == 'COMPLETE_LOCAL_CLOCK', 1).otherwise(0)).alias('complete_local_clock_profiles'),
+                            F.sum('invalid_clock_slots').alias('invalid_clock_slots'),
+                        ).first()
+                        row['local_clock_coverage'] = {
+                            'profiles': int(local_summary.profiles),
+                            'complete_local_clock_profiles': int(local_summary.complete_local_clock_profiles),
+                            'invalid_clock_slots': int(local_summary.invalid_clock_slots),
+                            'seconds': round(time.perf_counter() - local_started, 3),
+                            'utc_instant_mapping_verified': False,
+                        }
                     results.append(row)
                     print("RESULT", json.dumps(row, sort_keys=True), flush=True)
                     csv_path.unlink()
@@ -142,13 +158,14 @@ def main():
     p.add_argument("--max-files", type=int, default=8)
     p.add_argument("--master", default="local[2]")
     p.add_argument("--check-coverage", action="store_true", help="Run exact distinct-quarter coverage per profile (separate shuffled workload)")
+    p.add_argument('--check-local-clock', action='store_true', help='Check Belgian local DST clock separately from UTC')
     args = p.parse_args()
     if not 1 <= args.max_files <= 8: p.error("--max-files must be between 1 and 8")
     spark = (SparkSession.builder.appName("fluvius-p6269-real-data-quality-benchmark")
         .master(args.master).config("spark.sql.session.timeZone","UTC")
         .config("spark.sql.shuffle.partitions","8").getOrCreate())
     spark.sparkContext.setLogLevel("ERROR")
-    try: benchmark(spark, args.output, max_files=args.max_files, check_coverage=args.check_coverage)
+    try: benchmark(spark, args.output, max_files=args.max_files, check_coverage=args.check_coverage, check_local_clock=args.check_local_clock)
     finally: spark.stop()
 
 
