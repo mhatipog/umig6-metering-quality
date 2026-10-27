@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "umig6-metering-quality"
-version = "0.3.0"
-description = "PySpark metering and asset quality, quarantine, and legacy UMIG6 migration-readiness assessment"
+version = "0.4.0"
+description = "MIG6-aware PySpark quality, quarantine, migration readiness, and pinned public metering checks"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
