@@ -72,7 +72,7 @@ def run(spark, rows: int, partitions: int, workload: str):
         "rows_per_second": round(actual / seconds) if seconds else None,
         "accepted": int(accepted), "rejected": int(rejected),
         "optimized_plan_sha256": hashlib.sha256(plan.encode()).hexdigest(),
-        "spark_adaptive_execution": spark.conf.get("spark.sql.adaptive.enabled", "unknown"),
+        "spark_adaptive_execution": spark.conf.get("spark.sql.adaptive.enabled"),
         "environment": os.environ.get("BENCH_ENVIRONMENT", "unspecified"),
     }
     df.unpersist()
