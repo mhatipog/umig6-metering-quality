@@ -1,0 +1,62 @@
+name: Diagnose P6269 timestamp duplicates
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/diagnose-profile-clock.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Identify duplicates for one anonymised public profile
+        shell: bash
+        run: |
+          python - <<'PY'
+          import collections,csv,datetime,io,json,urllib.request,zipfile,tempfile,hashlib
+          from pathlib import Path
+          ds="1_50-verbruiksprofielen-dm-elek-kwartierwaarden-voor-een-volledig-jaar"
+          url=f"https://opendata.fluvius.be/api/explore/v2.1/catalog/datasets/{ds}"
+          with urllib.request.urlopen(url,timeout=25) as response:
+              meta=json.load(response)
+          attachment=next(a for a in meta["attachments"] if a["title"].endswith("Deel_1.zip"))
+          with tempfile.TemporaryDirectory() as temp:
+              path=Path(temp)/"profiles.zip"
+              request=urllib.request.Request(attachment["url"],headers={"User-Agent":"umig6-timestamp-diagnostic/0.5"})
+              with urllib.request.urlopen(request,timeout=60) as response,open(path,"wb") as out:
+                  while chunk:=response.read(2*1024*1024):out.write(chunk)
+              with zipfile.ZipFile(path) as archive:
+                  member=next(x for x in archive.namelist() if x.endswith("geen_ZP.csv"))
+                  with archive.open(member) as infile:
+                      rows=csv.DictReader(io.TextIOWrapper(infile,encoding="utf-8-sig",newline=""))
+                      profile=None
+                      observed=collections.Counter()
+                      local_dates=collections.Counter()
+                      total=0
+                      for row in rows:
+                          if profile is None: profile=row["EAN_ID"]
+                          if row["EAN_ID"]!=profile:
+                              if total: break
+                              continue
+                          observed[row["Datum_Startuur"]]+=1
+                          local_dates[row["Datum"]]+=1
+                          total+=1
+              print("ONE_PROFILE_ROWS",total,flush=True)
+              print("UNIQUE_UTC_LABELS",len(observed),flush=True)
+              dup=[(t,n) for t,n in sorted(observed.items()) if n>1]
+              print("DUPLICATE_UTC_LABELS",dup[:30],flush=True)
+              print("TOTAL_DUP_EXCESS",sum(n-1 for _,n in dup),flush=True)
+              print("SOURCE_DATE_OCT27",[(k,v) for k,v in sorted(local_dates.items()) if "2024-10-27" in k or "27/10/2024" in k],flush=True)
+              instants=set()
+              for stamp in observed:
+                  try:instants.add(datetime.datetime.fromisoformat(stamp.replace("Z","+00:00")))
+                  except ValueError: print("BAD_UTC_FORMAT",repr(stamp[:16]),flush=True)
+              if instants:
+                  start=datetime.datetime(2024,1,1,tzinfo=datetime.timezone.utc)
+                  missing=[(start+datetime.timedelta(minutes=15*i)).isoformat() for i in range(366*96) if start+datetime.timedelta(minutes=15*i) not in instants]
+                  print("MISSING_UTC_INSTANTS",len(missing),missing[:30],flush=True)
+                  print("FIRST_LAST_UTC",min(instants).isoformat(),max(instants).isoformat(),flush=True)
+              print("No raw profile IDs or meter values emitted.")
+          PY
