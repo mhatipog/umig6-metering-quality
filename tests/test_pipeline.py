@@ -198,3 +198,17 @@ def test_nonfinite_metering_value_is_quarantined(spark, utc):
         ("541440000000000000", "TEST", "A+", t, t + timedelta(minutes=15), float("inf"), None, "MEASURED"),
     ], schema)
     assert "INVALID_ENERGY_VALUE" in process_metering(data).rejected.first().quality_errors
+
+
+def test_conflicting_intermediate_revision_blocks_inferred_change(readings, make_reading, utc):
+    t = utc()
+    source = readings([
+        make_reading(t, "0.100000", revision=utc(2026, 1, 3)),
+        make_reading(t, "0.200000", revision=utc(2026, 1, 4)),
+        make_reading(t, "0.300000", revision=utc(2026, 1, 4)),
+        make_reading(t, "0.400000", revision=utc(2026, 1, 5)),
+    ])
+    result = process_metering(source)
+    assert str(result.current.first().energy_kwh) == "0.400000"
+    assert result.rejected.count() == 2
+    assert result.changes.count() == 0  # Unresolved history is not a known transition

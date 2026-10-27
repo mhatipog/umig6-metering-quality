@@ -147,6 +147,12 @@ def process_metering(
            | (F.col("previous_method") != F.col("measurement_method")))
     ).select(*KEY, "revision_at_utc", "previous_kwh", "energy_kwh", "previous_method", "measurement_method")
 
+    # If any version of an interval is conflicting, the intermediate history
+    # is not reliable enough to assert a continuous sequence of changes.
+    # Do not invent a direct transition that jumps over an unresolved revision.
+    unresolved_keys = conflicted_versions.select(*KEY).distinct()
+    changes = changes.join(unresolved_keys, list(KEY), "left_anti")
+
     # Remove working columns from published datasets.
     hidden = ("_payload_hash", "_max_revision", "_variants", "_revision_key")
     def visible(df: DataFrame) -> DataFrame:
