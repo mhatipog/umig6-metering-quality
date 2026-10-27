@@ -87,3 +87,9 @@ def test_profile_coverage_complete_when_all_instants_are_distinct(spark):
     row=profile_coverage(data, expected_intervals=2,
         expected_start_utc="2024-01-01 00:00:00", expected_end_utc="2024-01-01 00:15:00").first()
     assert row.coverage_status == "COMPLETE"
+
+
+def test_public_profile_utc_labels_are_explicitly_unverified(spark):
+    x = screen_public_profiles(sample(spark, (
+        "p", "2024-10-27", "2024-10-27T02:15:00.000Z", "0.3", "0")))
+    assert x.valid.first().source_utc_label_unverified is True

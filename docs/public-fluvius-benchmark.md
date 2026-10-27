@@ -24,8 +24,7 @@ python examples/benchmark_public_fluvius.py --max-files 8 --output full.json
 For each input row, the quality engine checks source identity, parseable
 quarter-hour timestamps, explicit UTC timestamps (or unambiguous Europe/Brussels local time), import and
 injection energy values, and interval alignment. It keeps anomalous rows out
-of the valid subset. The official archive uses UTC ISO-8601 timestamps with a `Z` suffix,
-so repeated local 02:00 readings can be distinguished. Local-time-only
+of the valid subset. The official archive labels its timestamps with the UTC `Z` suffix, but the 2024 DST pattern contradicts treating those labels as reliably unique UTC instants. The two October 02:xx observations share identical timestamp strings and **cannot** be distinguished from the suffix alone. Local-time-only
 exports lacking an offset remain explicitly quarantined at fall DST. This is a deliberate limit, not proof
 that Fluvius's data is wrong.
 
@@ -84,7 +83,22 @@ commit `cce9911363ce1309d535474a319d855706c54aea`:
 | Heat pump + EV, no PV | 10,540,800 | 28.347 |
 | Heat pump + EV + PV | 10,540,800 | 28.515 |
 
-The real source has an ISO-8601 `Datum_Startuur` in UTC (`Z` suffix), not
-ambiguous Brussels wall times. The parser preserves this offset. The original
+The real source has an ISO-8601 `Datum_Startuur` string with a `Z` suffix; its DST calendar nevertheless behaves like Brussels wall time. The parser preserves the literal source label, but the parsed `interval_start_utc` must **not** be used as a trusted UTC instant until the data owner establishes the clock semantics. The original
 consumer CSV adapter for local times uses separate, conservative DST handling.
 All measurements are from the original public ZIPs, not a synthetic workload.
+
+## Reproduced source-clock conflict and two independent checks
+
+A public 2024 profile has 35,136 rows but just 35,132 distinct UTC-labelled
+clock strings. The four absent labels are `2024-03-31T02:00/15/30/45Z`;
+the four duplicated labels are `2024-10-27T02:00/15/30/45Z`.
+The [diagnostic run](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40527488281)
+confirms this from the unmodified official ZIP.
+
+`profile_coverage()` measures strict UTC-label uniqueness. The separate,
+Spark-native `profile_local_clock_coverage()` checks **exact local clock
+multiplicities** (92 / 96 / 100 quarters by day), flags any missing clock
+slot, and refuses a duplicate hiding a missing slot. It never guesses which
+of the repeated autumn readings belongs to the first versus second offset.
+The full-corpus benchmark now runs both checks and measures their times
+separately. [Background and boundaries](p6269-clock-semantics.md).

@@ -250,3 +250,19 @@ problems = coverage.where("coverage_status = 'INCOMPLETE'")
 
 This exact per-profile distinct count is a separate Spark shuffle workload;
 see the [real-data benchmark](docs/public-fluvius-benchmark.md) for its cost.
+
+### Public-source timestamp warning: DST (v0.5)
+
+The official P6269 2024 CSV contains clock labels ending in `Z`, but
+those strings have the 92/100-quarter pattern of Belgian *local time*:
+all four `2024-03-31T02:xxZ` labels are absent and all four
+`2024-10-27T02:xxZ` labels appear twice for the same anonymous profile.
+This contradicts interpreting the labels as unique UTC instants.
+The adapter marks `source_utc_label_unverified=True`; **do not use its
+`interval_start_utc` column as an authoritative UTC join key.**
+
+The independent `profile_local_clock_coverage()` check now validates local
+calendar completeness, including both DST transitions, without manufacturing
+a UTC offset. Strict `profile_coverage()` remains available to test what
+happens if the source's UTC suffix is interpreted literally. These are
+*different questions*. See [the reproducible diagnosis](docs/p6269-clock-semantics.md).
