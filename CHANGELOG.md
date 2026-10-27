@@ -30,3 +30,15 @@
 
 Not official Atrias validation; not tested on production CMS exchanges or
 Databricks Photon. No private customer data is published.
+
+### Cross-version verification
+
+- Normalised the Mijn Fluvius consumer CSV's supported day/month/year dates
+  before a single strict timestamp parser, avoiding a Spark 3.5
+  `SparkUpgradeException` from chained incompatible date formats.
+  Two-digit report years follow the adapter's documented 20YY convention.
+- [Spark 3.5.5 and 4.2.1 matrix](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40553118855):
+  **86/86 tests passed** on each version after the parser correction.
+- [Complete public Fluvius regression](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40549961842):
+  84,326,400 rows, all 2,400 profiles locally complete, no official
+  UTC-instant reconstruction.

@@ -102,3 +102,25 @@ slot, and refuses a duplicate hiding a missing slot. It never guesses which
 of the repeated autumn readings belongs to the first versus second offset.
 The full-corpus benchmark now runs both checks and measures their times
 separately. [Background and boundaries](p6269-clock-semantics.md).
+
+## Final source-clock regression on the complete 2024 corpus
+
+[GitHub Actions run 40549961842](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40549961842)
+repeated the complete eight-file run after adjusting the public P6269 source
+adapter so `local_start_be` reflects the raw source's local clock label rather
+than an unjustified UTC-to-Brussels conversion.
+
+- 84,326,400 public source rows, 84,326,400 passed row-level quality checks;
+  zero quarantined under the implemented structural rules.
+- 2,400 of 2,400 anonymised profiles satisfied the exact local-wall-clock
+  calendar (including spring 92-quarter and autumn 100-quarter days).
+- 2,400 of 2,400 **still fail strict UTC-instant uniqueness** if the
+  source's `Z` suffix is taken literally. They are not certified UTC instants.
+- 368.027 seconds summed row screening on this GitHub-hosted Spark 4.2.0
+  execution, excluding archive transfer and the separate coverage actions.
+  The earlier 229.913-second run used a different hosted execution and is
+  **not** a controlled before/after performance comparison.
+
+No source records or anonymised profile IDs were published in artifacts.
+Both coverage checks are intentionally reported, not reconciled by guessing
+which repeated October observation maps to which offset.

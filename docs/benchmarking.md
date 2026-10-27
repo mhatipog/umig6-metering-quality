@@ -159,3 +159,11 @@ python examples/benchmark_spark.py \
 To compare with the uncached mode, change `--workload` to
 `corrections-full`. Materialising only `current` and `rejected`
 understates the cost of a real revision audit.
+
+## Runtime compatibility
+
+The consumer CSV date-normalisation correction was verified on both
+PySpark 3.5.5 and 4.2.1 in
+[CI run 40553118855](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40553118855):
+86 tests passed on each. Databricks Runtime/Photon performance and historical
+UMIG message conformance are separate, unverified production concerns.
