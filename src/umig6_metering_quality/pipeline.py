@@ -11,6 +11,7 @@ No Python UDFs, driver-side collections or implicit billing decisions are used.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pyspark import StorageLevel
 
 from pyspark.sql import DataFrame, Window
 from pyspark.sql import functions as F
@@ -31,6 +32,17 @@ class MeteringQualityResult:
     superseded: DataFrame
     changes: DataFrame
     coverage: DataFrame | None
+    _cached: tuple[DataFrame, ...] = ()
+
+    def release_cache(self):
+        for frame in self._cached:
+            frame.unpersist(blocking=True)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.release_cache()
 
 
 def _check_columns(df: DataFrame, names: tuple[str, ...], frame: str) -> None:
@@ -89,7 +101,8 @@ def _payload_hash() -> F.Column:
 
 def process_metering(
     readings: DataFrame, scopes: DataFrame | None = None, *,
-    interval_minutes: int = 15, validate_ean_format: bool = True
+    interval_minutes: int = 15, validate_ean_format: bool = True,
+    cache_shared: bool = False,
 ) -> MeteringQualityResult:
     """Validate versioned interval readings without discarding contradictory evidence.
 
@@ -114,6 +127,10 @@ def process_metering(
     # Re-deliveries with the same revision and values are harmless. We remove
     # only exact business duplicates, leaving conflicting values visible.
     versions = valid.dropDuplicates([*KEY, "revision_at_utc", "_payload_hash"])
+    cached = []
+    if cache_shared:
+        versions = versions.persist(StorageLevel.MEMORY_AND_DISK)
+        cached.append(versions)
     # A revision key makes null-safe equality practical for Spark joins.
     # Preserve microseconds and ensure the source session uses UTC.
     versions = versions.withColumn(
@@ -132,6 +149,9 @@ def process_metering(
     # claim is conflicted, do not silently fall back to an older value.
     latest_revision = versions.groupBy(*KEY).agg(F.max("revision_at_utc").alias("_max_revision"))
     annotated = safe_versions.join(latest_revision, list(KEY), "inner")
+    if cache_shared:
+        annotated = annotated.persist(StorageLevel.MEMORY_AND_DISK)
+        cached.append(annotated)
     is_latest = F.col("revision_at_utc").eqNullSafe(F.col("_max_revision"))
     current = annotated.where(is_latest)
     superseded = annotated.where(~is_latest)
@@ -165,6 +185,7 @@ def process_metering(
         rejected=visible(rejected),
         superseded=_enrich(visible(superseded), interval_minutes),
         changes=changes, coverage=coverage,
+        _cached=tuple(cached),
     )
 
 
