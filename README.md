@@ -102,8 +102,10 @@ result = process_metering(loaded.readings)
   The exact current exports still need independent verification with authorised
   examples; no consumer data is bundled here.
 
-Try `examples/fluvius_export_pipeline.py` with two CSV exports. A Spark
-cluster, not a My Fluvius login or CMS access, is all that is required.
+Try `examples/fluvius_export_pipeline.py` with two CSV exports stored at
+**different immutable paths**. Spark reads lazily: overwriting a path after
+building a DataFrame can corrupt a historical comparison. A Spark cluster,
+not a Mijn Fluvius login or CMS access, is all that is required.
 
 ### Input contract
 

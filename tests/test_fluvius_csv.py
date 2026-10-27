@@ -15,8 +15,8 @@ def row(start_date="02-01-26", start="00:00:00", end_date="02-01-26", end="00:15
     return f"{start_date};{start};{end_date};{end};{ean};{METER};DIGITAL;{register};{volume};kWh;{status}"
 
 
-def export(tmp_path, *rows, header=HEADER):
-    p = tmp_path / "export.csv"
+def export(tmp_path, *rows, header=HEADER, filename="export.csv"):
+    p = tmp_path / filename
     p.write_text(header + "\n" + "\n".join(rows) + "\n", encoding="latin-1")
     return str(p)
 
@@ -85,10 +85,20 @@ def test_snapshot_must_be_utc(spark, tmp_path):
 
 
 def test_export_snapshot_changes_not_equated_to_official_revisions(spark, tmp_path):
-    first = read_fluvius_csv(spark, export(tmp_path, row(volume="0.300000")), snapshot_at_utc=snapshot(3))
-    second = read_fluvius_csv(spark, export(tmp_path, row(volume="0.400000")), snapshot_at_utc=snapshot(4))
+    # Spark reads files lazily. Independent snapshots must be immutable paths;
+    # replacing a file under an existing DataFrame invalidates the comparison.
+    first = read_fluvius_csv(spark, export(tmp_path, row(volume="0.300000"), filename="older.csv"), snapshot_at_utc=snapshot(3))
+    second = read_fluvius_csv(spark, export(tmp_path, row(volume="0.400000"), filename="newer.csv"), snapshot_at_utc=snapshot(4))
     result = process_metering(first.readings.unionByName(second.readings))
     assert result.current.count() == 1
     assert result.superseded.count() == 1
     assert result.changes.count() == 1
     assert {r.revision_basis for r in result.current.collect()} == {"EXPORT_SNAPSHOT"}
+
+
+def test_published_style_single_digit_time_and_day(spark, tmp_path):
+    # Public Fluvius report examples use 1/01/2021 and 0:00:00 formats.
+    sample = row("1/01/2021", "0:00:00", "1/01/2021", "0:15:00", register="Afname Actief")
+    imported = read_fluvius_csv(spark, export(tmp_path, sample), snapshot_at_utc=snapshot())
+    assert imported.rejected.count() == 0
+    assert imported.readings.first().interval_start_utc == datetime(2020, 12, 31, 23)

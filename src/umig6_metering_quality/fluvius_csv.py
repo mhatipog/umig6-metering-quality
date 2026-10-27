@@ -56,6 +56,9 @@ def _columns(df: DataFrame, provided: Mapping[str, str] | None) -> dict[str, str
     missing_keys = set(DUTCH_COLUMNS) - set(expected)
     if missing_keys:
         raise ValueError(f"source_columns missing keys: {', '.join(sorted(missing_keys))}")
+    extra_keys = set(expected) - set(DUTCH_COLUMNS)
+    if extra_keys:
+        raise ValueError(f"source_columns unknown keys: {', '.join(sorted(extra_keys))}")
     if len(set(expected.values())) != len(expected):
         raise ValueError("source_columns contains duplicate field assignments")
     lookup: dict[str, str] = {}
@@ -74,13 +77,18 @@ def _columns(df: DataFrame, provided: Mapping[str, str] | None) -> dict[str, str
 
 
 def _parse_wall_clock(date: F.Column, clock: F.Column) -> F.Column:
-    value = F.concat_ws(" ", F.trim(date), F.trim(clock))
-    # Explicit patterns, not locale-sensitive inference. NULL on malformed input.
+    # Some published Fluvius report examples have hours such as "0:00:00"
+    # and dates such as "1/01/2021". Pad a single-digit hour, then parse
+    # explicitly instead of relying on Spark's locale or machine timezone.
+    padded_clock = F.regexp_replace(F.trim(clock), r"^([0-9]):", r"0$1:")
+    value = F.concat_ws(" ", F.trim(date), padded_clock)
     return F.coalesce(*(
         F.try_to_timestamp(value, F.lit(fmt))
         for fmt in (
             "dd-MM-yy HH:mm:ss", "dd-MM-yyyy HH:mm:ss",
+            "d-M-yy HH:mm:ss", "d-M-yyyy HH:mm:ss",
             "dd/MM/yy HH:mm:ss", "dd/MM/yyyy HH:mm:ss",
+            "d/M/yy HH:mm:ss", "d/M/yyyy HH:mm:ss",
             "yyyy-MM-dd HH:mm:ss",
         )
     ))
@@ -139,8 +147,8 @@ def read_fluvius_csv(
     ambiguous = _unresolvable_local_time(F.col("_wall_start")) | _unresolvable_local_time(F.col("_wall_end"))
 
     reg = F.lower(F.trim(F.col("_src_register")))
-    import_registers = ("a+", "1.8.0", "afname totaal", "prelevement total", "prélèvement total")
-    export_registers = ("a-", "2.8.0", "injectie totaal", "injection total")
+    import_registers = ("a+", "1.8.0", "afname totaal", "afname actief", "prelevement total", "prélèvement total")
+    export_registers = ("a-", "2.8.0", "injectie totaal", "injectie actief", "injection total")
     canonical_register = (F.when(reg.isin(*import_registers), F.lit("A+"))
                           .when(reg.isin(*export_registers), F.lit("A-")))
     vol_text = F.trim(F.col("_src_volume"))
