@@ -14,9 +14,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {shuffle_partitions: 8, workload: corrections-full}
-          - {shuffle_partitions: 8, workload: corrections-full-cached}
-          - {shuffle_partitions: 32, workload: corrections-full-cached}
+          - {shuffle_partitions: 8, workload: corrections-full, revisions_every: 10}
+          - {shuffle_partitions: 8, workload: corrections-full-cached, revisions_every: 10}
+          - {shuffle_partitions: 32, workload: corrections-full-cached, revisions_every: 10}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -35,11 +35,12 @@ jobs:
           python examples/benchmark_spark.py \
             --rows 1000000 --partitions 8 \
             --shuffle-partitions ${{ matrix.shuffle_partitions }} \
+            --revisions-every ${{ matrix.revisions_every }} \
             --workload ${{ matrix.workload }} --output-json correction-full.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ${{ matrix.workload }}-shuffle-${{ matrix.shuffle_partitions }}
+          name: ${{ matrix.workload }}-shuffle-${{ matrix.shuffle_partitions }}-rev-${{ matrix.revisions_every }}
           path: correction-full.json
           if-no-files-found: ignore
           retention-days: 30
