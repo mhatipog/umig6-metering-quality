@@ -1,0 +1,46 @@
+name: Declared provenance replay benchmark
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'examples/benchmark_spark.py'
+      - '.github/workflows/provenance-performance.yml'
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -e . pyspark==4.2.1
+      - name: Baseline complete correction replay
+        env:
+          SPARK_LOCAL_IP: 127.0.0.1
+          PYSPARK_SUBMIT_ARGS: '--driver-memory 3g pyspark-shell'
+          BENCH_ENVIRONMENT: github-hosted-ubuntu-spark-local-not-databricks
+        run: |
+          python examples/benchmark_spark.py --rows 1000000 --partitions 8 --shuffle-partitions 8 --revisions-every 10 --workload corrections-full-cached --output-json baseline.json
+      - name: Same replay with declared provenance fields
+        env:
+          SPARK_LOCAL_IP: 127.0.0.1
+          PYSPARK_SUBMIT_ARGS: '--driver-memory 3g pyspark-shell'
+          BENCH_ENVIRONMENT: github-hosted-ubuntu-spark-local-not-databricks
+        run: |
+          python examples/benchmark_spark.py --rows 1000000 --partitions 8 --shuffle-partitions 8 --revisions-every 10 --workload corrections-full-cached-evidenced --output-json evidenced.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: declared-provenance-spark-performance
+          path: |
+            baseline.json
+            evidenced.json
+          if-no-files-found: ignore
+          retention-days: 30
