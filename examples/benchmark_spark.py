@@ -76,8 +76,15 @@ def run(spark, rows: int, partitions: int, workload: str):
         plan = result.summary._jdf.queryExecution().optimizedPlan().toString()
     elif workload == "corrections":
         result = process_metering(df)
-        # Count both sinks: the rejected side cannot silently disappear.
+        # Legacy benchmark: only materialises the current and rejected lanes.
         accepted, rejected = result.current.count(), result.rejected.count()
+        plan = result.current._jdf.queryExecution().optimizedPlan().toString()
+    elif workload == "corrections-full":
+        result = process_metering(df)
+        # All four materialised outputs matter in a real quarantine/replay job.
+        # Spark is lazy: counting only current and rejected understates work.
+        accepted, rejected = result.current.count(), result.rejected.count()
+        superseded, changed = result.superseded.count(), result.changes.count()
         plan = result.current._jdf.queryExecution().optimizedPlan().toString()
     else:
         raise ValueError(workload)
@@ -94,6 +101,12 @@ def run(spark, rows: int, partitions: int, workload: str):
         "spark_adaptive_execution": spark.conf.get("spark.sql.adaptive.enabled"),
         "environment": os.environ.get("BENCH_ENVIRONMENT", "unspecified"),
     }
+    if workload == "corrections-full":
+        out["superseded"] = int(superseded)
+        out["changed"] = int(changed)
+        out["materialized_outputs"] = ["current", "rejected", "superseded", "changes"]
+    elif workload == "corrections":
+        out["materialized_outputs"] = ["current", "rejected"]
     df.unpersist()
     return out
 
@@ -103,7 +116,7 @@ def main():
     parser.add_argument("--rows", type=int, default=1_000_000)
     parser.add_argument("--partitions", type=int, default=16)
     parser.add_argument("--shuffle-partitions", type=int, help="Optional explicit benchmark shuffle partition count")
-    parser.add_argument("--workload", choices=("readiness", "rulebook", "bronze", "provenance", "corrections", "all"), default="all")
+    parser.add_argument("--workload", choices=("readiness", "rulebook", "bronze", "provenance", "corrections", "corrections-full", "all"), default="all")
     parser.add_argument("--output-json", help="Write structured metrics to a JSON file")
     args = parser.parse_args()
     if args.rows <= 0 or args.partitions <= 0:

@@ -1,0 +1,42 @@
+name: Complete correction replay Spark benchmark
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/correction-performance.yml'
+permissions:
+  contents: read
+jobs:
+  correction-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shuffle_partitions: [8, 32]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -e .
+      - name: Materialize every correction output
+        env:
+          SPARK_LOCAL_IP: 127.0.0.1
+          BENCH_ENVIRONMENT: github-hosted-spark-local-full-correction-sinks
+        run: |
+          python examples/benchmark_spark.py \
+            --rows 1000000 --partitions 8 \
+            --shuffle-partitions ${{ matrix.shuffle_partitions }} \
+            --workload corrections-full --output-json correction-full.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: correction-full-shuffle-${{ matrix.shuffle_partitions }}
+          path: correction-full.json
+          if-no-files-found: ignore
+          retention-days: 30
