@@ -231,9 +231,10 @@ from umig6_metering_quality.public_profiles import (
     read_public_profiles, screen_public_profiles, public_profile_metrics,
 )
 checked = screen_public_profiles(read_public_profiles(spark, "/mnt/P6269_sample.csv"))
-checked.valid.write.format("delta").saveAsTable("quality.public_profiles_valid")
+checked.valid.write.format("delta").saveAsTable("quality.public_profiles_structural_pass")
 checked.quarantine.write.format("delta").saveAsTable("quality.public_profiles_quarantine")
 public_profile_metrics(checked).show()
+# A structural pass does NOT establish unique UTC instants in P6269.
 ```
 
 Run `python examples/benchmark_public_fluvius.py --max-files 8` for reproducible
