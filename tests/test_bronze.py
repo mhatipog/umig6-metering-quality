@@ -24,3 +24,10 @@ def test_bronze_checks_ean_before_enrichment(readings, make_reading, utc):
     result = screen_metering_rows(readings([make_reading(utc(), ean="bad")]))
     assert result.accepted.count() == 0
     assert "INVALID_BELGIAN_EAN_FORMAT" in result.quarantine.first().quality_errors
+
+
+def test_bronze_does_not_enrich_unverified_utc_claim(readings, make_reading, utc):
+    # Local month and power outputs belong after the provenance gate.
+    data = screen_metering_rows(readings([make_reading(utc())]))
+    assert "local_date_be" not in data.accepted.columns
+    assert "avg_power_kw" not in data.accepted.columns

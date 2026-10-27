@@ -8,7 +8,7 @@ correction-aware shuffles. Native Spark expressions only.
 from __future__ import annotations
 from dataclasses import dataclass
 from pyspark.sql import DataFrame, functions as F
-from .pipeline import REQUIRED, _check_columns, _check_types, _checks, _enrich
+from .pipeline import REQUIRED, _check_columns, _check_types, _checks
 
 
 @dataclass(frozen=True)
@@ -43,7 +43,7 @@ def screen_metering_rows(
     )
     return BronzeScreenResult(
         evaluated=result,
-        accepted=_enrich(result.where("bronze_screen_status = 'PASS'"), interval_minutes),
+        accepted=result.where("bronze_screen_status = 'PASS'"),
         quarantine=result.where("bronze_screen_status = 'QUARANTINE'"),
         summary=summary,
     )
