@@ -36,3 +36,23 @@ Verified GitHub Actions [benchmark run 40506012951](https://github.com/mhatipog/
 *Rulebook accepted here includes **INCOMPLETE**, because no source readout digit metadata was supplied. It is **not** a million completely validated records.*
 
 These are different workloads. The correction benchmark computes two output counts, and may re-execute part of the Spark plan. This is not Azure Databricks / Photon throughput, not end-to-end Delta persistence, not a market-data certification and not a full-scale public Fluvius corpus test.
+
+## Fast-path correctness boundary
+
+`screen_metering_rows()` is a projection-only Bronze quality screen. It
+preserves duplicates and emits an independent quarantine output. It does **not**
+calculate latest revisions, missing quarters, supplier-state changes or asset
+assignment validity. Never replace `process_metering()` with this fast path if
+correction lineage is needed. The intended Databricks pattern is:
+
+1. Row-wise Bronze screening for cheap malformed-value quarantine.
+2. Explicit `screen_source_provenance()` review of source system, timestamp
+   semantics and revision basis.
+3. Correction-aware `process_metering()` on `replay_ready` rows, with
+   separate quarantine, superseded and changes outputs.
+
+The synthetic benchmark now times `bronze` and `provenance` stages separately
+from the correction-heavy stateful step on identical source row counts. These
+measure different operations and must **not** be described as a directly
+interchangeable speed comparison. Report source materialization separately.
+Databricks/Photon throughput and cost remain unmeasured.

@@ -13,7 +13,8 @@ import os
 import time
 from pyspark.sql import SparkSession, functions as F
 from pyspark import StorageLevel
-from umig6_metering_quality import evaluate_readiness, process_metering
+from umig6_metering_quality import (evaluate_readiness, process_metering,
+                                    screen_source_provenance, screen_metering_rows)
 from umig6_metering_quality.rulebook import screen_continuous_measures
 
 
@@ -55,6 +56,24 @@ def run(spark, rows: int, partitions: int, workload: str):
         metric = result.summary.first()
         accepted, rejected = metric.passed + metric.incomplete, metric.failed
         plan = result.summary._jdf.queryExecution().optimizedPlan().toString()
+    elif workload == "bronze":
+        result = screen_metering_rows(df)
+        metric = result.summary.first()
+        accepted, rejected = metric.accepted_rows, metric.quarantined_rows
+        plan = result.summary._jdf.queryExecution().optimizedPlan().toString()
+    elif workload == "provenance":
+        evidenced = (df
+            .withColumn("source_system", F.lit("SYNTHETIC_MDM"))
+            .withColumn("source_record_id", F.concat_ws(":",
+                F.col("ean"), F.col("meter_id"),
+                F.date_format("interval_start_utc", "yyyy-MM-dd HH:mm:ss")))
+            .withColumn("source_evidence_ref", F.lit("synthetic-source-contract-v1"))
+            .withColumn("timestamp_semantics", F.lit("UTC_VERIFIED"))
+            .withColumn("revision_basis", F.lit("SOURCE_REVISION")))
+        result = screen_source_provenance(evidenced)
+        metric = result.summary.first()
+        accepted, rejected = metric.analytics_ready_rows, metric.review_rows + metric.quarantine_rows
+        plan = result.summary._jdf.queryExecution().optimizedPlan().toString()
     elif workload == "corrections":
         result = process_metering(df)
         # Count both sinks: the rejected side cannot silently disappear.
@@ -84,7 +103,7 @@ def main():
     parser.add_argument("--rows", type=int, default=1_000_000)
     parser.add_argument("--partitions", type=int, default=16)
     parser.add_argument("--shuffle-partitions", type=int, help="Optional explicit benchmark shuffle partition count")
-    parser.add_argument("--workload", choices=("readiness", "rulebook", "corrections", "all"), default="all")
+    parser.add_argument("--workload", choices=("readiness", "rulebook", "bronze", "provenance", "corrections", "all"), default="all")
     parser.add_argument("--output-json", help="Write structured metrics to a JSON file")
     args = parser.parse_args()
     if args.rows <= 0 or args.partitions <= 0:
@@ -96,7 +115,7 @@ def main():
         builder = builder.config("spark.sql.shuffle.partitions", str(args.shuffle_partitions))
     spark = builder.getOrCreate()
     try:
-        workloads = ("readiness", "rulebook", "corrections") if args.workload == "all" else (args.workload,)
+        workloads = ("readiness", "rulebook", "bronze", "provenance", "corrections") if args.workload == "all" else (args.workload,)
         records = [run(spark, args.rows, args.partitions, work) for work in workloads]
         for record in records:
             print(json.dumps(record, sort_keys=True))
