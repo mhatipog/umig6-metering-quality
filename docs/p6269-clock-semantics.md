@@ -30,3 +30,13 @@ as UTC event-time joins in an analytics or MIG6 migration pipeline.
 
 Evidence: the official P6269 2024 dataset, identified via its published ZIP
 attachments, and the [GitHub diagnostic run](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40527488281).
+
+## Verified real-data smoke — 27 October 2026
+
+[GitHub Actions run 40529787949](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40529787949)
+used one unmodified 2024 P6269 CSV, containing 10,540,800 records and 300
+anonymous profiles. **All 300 were locally complete** with no unexpected
+clock slots. The dedicated local-clock check took 65.466 seconds; row-wise
+validation took 51.415 seconds (Spark 4.2.0, local mode, GitHub-hosted runner).
+This proves completeness only for this tested category and the specific
+source-clock contract; UTC offset reconstruction remains unresolved.

@@ -266,3 +266,9 @@ calendar completeness, including both DST transitions, without manufacturing
 a UTC offset. Strict `profile_coverage()` remains available to test what
 happens if the source's UTC suffix is interpreted literally. These are
 *different questions*. See [the reproducible diagnosis](docs/p6269-clock-semantics.md).
+
+**Measured local-clock audit:** 300/300 public profiles complete on one official
+10,540,800-row category; 65.466 s for exact local-clock coverage, separate
+from 51.415 s for row-level screening (GitHub-hosted PySpark 4.2.0).
+[Reproducible run](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40529787949).
+The entire eight-category clock audit is a separate benchmark.
