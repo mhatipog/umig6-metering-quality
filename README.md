@@ -193,7 +193,7 @@ limitations and code examples.
 A reproducible synthetic benchmark now covers readiness, this pinned rulebook,
 and the full correction pipeline. The benchmark workflow records its environment
 and plan fingerprint; it is **not** an Azure Databricks or live Fluvius
-performance result. See [`docs/benchmarking.md`](docs/benchmarking.md).
+performance result. See [`docs/benchmarking.md`](docs/benchmarking.md). A measured one-million-row Spark 4.2 baseline is published there, with the exact run and limitations.
 
 ### Documentation used
 

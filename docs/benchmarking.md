@@ -22,3 +22,17 @@ Before benchmarking on the public corpus, download the files from Fluvius, verif
 Run with Photon where available and record runtime, node type, worker count, shuffle read/spill and job cost. Native Spark functions are Photon-compatible in principle, but acceleration cannot be inferred without an A/B measurement. For managed Delta targets follow [Azure Databricks optimisation guidance](https://learn.microsoft.com/en-us/azure/databricks/optimizations/); prefer current Unity Catalog and liquid clustering recommendations over hardcoded legacy partition/ZORDER defaults.
 
 Large data must never be collected to the driver. Benchmark JSON contains aggregate counts only. Do not publish source EANs, measurements or credentials.
+
+## Measured synthetic baseline — 27 October 2026
+
+Verified GitHub Actions [benchmark run 40506012951](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40506012951) on commit `9a2a5b9b` (job logs and JSON artifact). GitHub-hosted Ubuntu runner, Spark **4.2.0**, local mode, **1,000,000 synthetic readings**, source materialised before processing timers, 8 range partitions, 16 shuffle partitions, AQE enabled.
+
+| Workload | Processing seconds | Rows/second | Accepted | Rejected |
+| --- | ---: | ---: | ---: | ---: |
+| `readiness` | 4.516 | 221,458 | 1,000,000 | 0 |
+| `rulebook` | 1.082 | 924,450 | 1,000,000* | 0 |
+| `corrections` | 23.238 | 43,033 | 1,000,000 | 0 |
+
+*Rulebook accepted here includes **INCOMPLETE**, because no source readout digit metadata was supplied. It is **not** a million completely validated records.*
+
+These are different workloads. The correction benchmark computes two output counts, and may re-execute part of the Spark plan. This is not Azure Databricks / Photon throughput, not end-to-end Delta persistence, not a market-data certification and not a full-scale public Fluvius corpus test.
