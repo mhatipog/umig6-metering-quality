@@ -72,3 +72,15 @@ def test_numeric_legacy_ean_is_blocked_even_if_digits_look_correct(spark, utc):
           [(541234567890123456, "SUP01", utc(), None)])
     res = evaluate_readiness(df, "SUPPLIER_CHANGE")
     assert "WRONG_TYPE_EAN" in res.quarantine.first().readiness_blockers
+
+
+def test_metering_readiness_rejects_microsecond_length_drift(spark, utc):
+    from datetime import timedelta
+    t = utc()
+    df = _dataset(spark,[("ean",StringType()),("meter_id",StringType()),("register",StringType()),
+                  ("interval_start_utc",TimestampType()),("interval_end_utc",TimestampType()),
+                  ("energy_kwh",DecimalType(18,6))],
+            [(EAN,"M1","A+",t,t+timedelta(minutes=15, microseconds=1),Decimal("1.000000"))])
+    assessed = evaluate_readiness(df, "METERING_REPLAY")
+    assert assessed.quarantine.count() == 1
+    assert "NOT_QUARTER_HOURLY" in assessed.quarantine.first().readiness_blockers

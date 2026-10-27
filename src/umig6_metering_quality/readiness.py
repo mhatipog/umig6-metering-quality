@@ -110,13 +110,16 @@ def evaluate_readiness(data: DataFrame, scenario: str, *, validate_ean_format: b
     if scenario == "METERING_REPLAY" and "energy_kwh" in data.columns:
         if isinstance(data.schema["energy_kwh"].dataType, NumericType):
             reasons.append(F.when((F.col("energy_kwh") < F.lit(0)) |
-                                  F.isnan(F.col("energy_kwh").cast("double")), F.lit("INVALID_ENERGY")))
+                                  F.isnan(F.col("energy_kwh").cast("double")) |
+                                  (F.abs(F.col("energy_kwh").cast("double")) == F.lit(float("inf"))),
+                                  F.lit("INVALID_ENERGY")))
         else:
             reasons.append(F.lit("WRONG_TYPE_ENERGY_KWH"))
     if scenario == "METERING_REPLAY" and all(c in data.columns for c in spec.dates):
         if all(isinstance(data.schema[c].dataType, TimestampType) for c in spec.dates):
-            diff = F.unix_timestamp("interval_end_utc") - F.unix_timestamp("interval_start_utc")
-            reasons.append(F.when((diff > 0) & (diff != 900), F.lit("NOT_QUARTER_HOURLY")))
+            microseconds = F.unix_micros("interval_end_utc") - F.unix_micros("interval_start_utc")
+            reasons.append(F.when((microseconds > 0) & (microseconds != 900_000_000),
+                                  F.lit("NOT_QUARTER_HOURLY")))
     for column in spec.optional:
         if column not in data.columns:
             warnings.append(F.lit(f"UNAVAILABLE_{column.upper()}"))
