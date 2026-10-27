@@ -83,14 +83,22 @@ def screen_continuous_measures(
     missing_measure = F.col(value_column).isNull() | F.isnan(F.col(value_column).cast("double"))
     digit_result = F.lit("NOT_EVALUATED")
     if metadata:
-        observed = F.col(observed_digits_column).cast("long")
-        expected = F.col(expected_digits_column).cast("long")
+        # try_cast, rather than cast, is important on ANSI-enabled Databricks:
+        # old warehouse extracts sometimes contain nonnumeric readout metadata.
+        def safe_number(name: str, target: str):
+            identifier = "`" + name.replace("`", "``") + "`"
+            return F.expr(f"try_cast({identifier} AS {target})")
+
+        observed = safe_number(observed_digits_column, "BIGINT")
+        expected = safe_number(expected_digits_column, "BIGINT")
+        observed_decimal = safe_number(observed_digits_column, "DOUBLE")
+        expected_decimal = safe_number(expected_digits_column, "DOUBLE")
         # Unknown, malformed and non-positive source metadata is not evidence
         # that an observation passes or fails an official format check.
         usable = (observed.isNotNull() & expected.isNotNull()
                   & (observed > 0) & (expected > 0)
-                  & (F.col(observed_digits_column).cast("double") == observed.cast("double"))
-                  & (F.col(expected_digits_column).cast("double") == expected.cast("double")))
+                  & (observed_decimal == observed.cast("double"))
+                  & (expected_decimal == expected.cast("double")))
         digit_result = (F.when(~usable, F.lit("NOT_EVALUATED"))
                         .when(observed != expected, F.lit("FAIL"))
                         .otherwise(F.lit("PASS")))
