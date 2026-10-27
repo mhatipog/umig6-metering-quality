@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
-from pyspark.sql.types import NumericType, TimestampType
+from pyspark.sql.types import NumericType, TimestampType, StringType
 
 
 @dataclass(frozen=True)
@@ -90,6 +90,12 @@ def evaluate_readiness(data: DataFrame, scenario: str, *, validate_ean_format: b
             # The end column must exist and be typed, but may contain NULL.
             if not (column == spec.dates[-1] and scenario in ("ASSET_HISTORY", "SUPPLIER_CHANGE")):
                 reasons.append(F.when(~_nonempty(data, column), F.lit(f"MISSING_{column.upper()}")))
+    # Numeric identifiers are not safe to canonicalize after ingestion: leading
+    # zeros may already have been destroyed in legacy ETL or spreadsheet paths.
+    for identifier in ("ean", "meter_id", "asset_id", "supplier_id", "register"):
+        if identifier in spec.required and identifier in data.columns:
+            if not isinstance(data.schema[identifier].dataType, StringType):
+                reasons.append(F.lit(f"WRONG_TYPE_{identifier.upper()}"))
     if validate_ean_format and "ean" in data.columns:
         # Format screening only: not an EAN allocation or checksum authority.
         reasons.append(F.when(_nonempty(data, "ean") & ~F.col("ean").cast("string").rlike(r"^54[0-9]{16}$"),

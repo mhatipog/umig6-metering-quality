@@ -62,3 +62,13 @@ def test_current_supplier_contract_allows_open_end(spark, utc):
           [(EAN,"SUP01",utc(),None)])
     result = evaluate_readiness(df,"SUPPLIER_CHANGE")
     assert result.ready.count() == 1
+
+
+def test_numeric_legacy_ean_is_blocked_even_if_digits_look_correct(spark, utc):
+    # Legacy numeric keys lose leading zeros and cannot safely be treated as EAN strings.
+    from pyspark.sql.types import LongType
+    df = _dataset(spark, [("ean",LongType()), ("supplier_id",StringType()),
+          ("contract_start_utc",TimestampType()),("contract_end_utc",TimestampType())],
+          [(541234567890123456, "SUP01", utc(), None)])
+    res = evaluate_readiness(df, "SUPPLIER_CHANGE")
+    assert "WRONG_TYPE_EAN" in res.quarantine.first().readiness_blockers

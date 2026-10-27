@@ -10,7 +10,7 @@ This library evaluates whether a **legacy data extract has enough structurally c
 | `ASSET_HISTORY` | EAN, asset ID, meter ID, UTC validity start/end (open-ended allowed) | Identifying records without dates or stable point-to-meter keys before joining metering and assets | Whether a device was physically installed on that date |
 | `SUPPLIER_CHANGE` | EAN, supplier ID, UTC contract start/end (open-ended allowed) | Finding gaps in older supplier-assignment extracts before mapping to process-level data | Whether a switch was approved, notified, or executed by CMS |
 
-Do **not** confuse a 100% structural score with MIG6 conformance. Score denominator is only rows in the given DataFrame. Null/absent optional columns become warnings. Missing mandatory columns result in explicit blockers (no invented values). Data-model owners should additionally validate cross-system consistency and versioned source snapshots.
+Do **not** confuse a 100% structural score with MIG6 conformance. Score denominator is only rows in the given DataFrame. Identifiers (`ean`, `meter_id`, `asset_id`, `supplier_id`, `register`) must be strings when required; numeric legacy columns are blockers because leading zeros may have been lost. Null/absent optional columns become warnings. Missing mandatory columns result in explicit blockers (no invented values). Data-model owners should additionally validate cross-system consistency and versioned source snapshots.
 
 ```python
 from umig6_metering_quality import evaluate_readiness

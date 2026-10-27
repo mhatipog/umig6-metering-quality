@@ -13,7 +13,7 @@ or claim official Atrias or Fluvius certification.
 
 ### Beyond metering: v0.3 modules (experimental)
 
-- **Legacy readiness:** `evaluate_readiness(data, "METERING_REPLAY" | "ASSET_HISTORY" | "SUPPLIER_CHANGE")` reports row-level blockers/warnings and a distributed structural readiness score. Missing legacy columns become explicit failures rather than defaults. This is not certified UMIG conformance.
+- **Legacy readiness:** `evaluate_readiness(data, "METERING_REPLAY" | "ASSET_HISTORY" | "SUPPLIER_CHANGE")` reports row-level blockers/warnings and a distributed structural readiness score. Missing legacy columns and numeric identifiers that risk losing leading zeros become explicit failures rather than defaults. This is not certified UMIG conformance.
 - **Asset history:** `validate_asset_history(assets)` validates point-to-meter assignment keys and periods. Possible overlapping assignments are separate **review** signals, not automatically rejected.
 - **Cross-dataset check:** `reconcile_metering_assets(readings, accepted_assets)` flags metering observations with zero or multiple matching historical assignments. A temporal range join; filter to relevant slices before running at scale.
 - **Quarantine pattern:** `envelope_quarantine(result.rejected, dataset="metering", batch_id="load_001")` attaches deterministic IDs and produces reason-level counts. Optional `write_delta_batch` demonstrates retryable per-batch Delta writes, **not atomic across two tables**.
