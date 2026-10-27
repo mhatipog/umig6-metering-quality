@@ -227,3 +227,20 @@ def test_cached_revision_matches_uncached_across_four_outputs(readings, make_rea
         assert _count(cached) == expected
         assert cached.changes.count() == baseline.changes.count()
         assert len(cached._cached) == 2
+
+
+def test_cached_conflicting_revision_matches_uncached_quarantine(readings, make_reading, utc):
+    t = utc()
+    sample = readings([
+        make_reading(t, "0.100000", revision=utc(2026, 1, 3)),
+        make_reading(t, "0.200000", revision=utc(2026, 1, 4)),
+        make_reading(t, "0.300000", revision=utc(2026, 1, 4)),
+        make_reading(t, "0.400000", revision=utc(2026, 1, 5)),
+    ])
+    baseline = process_metering(sample)
+    with process_metering(sample, cache_shared=True) as cached:
+        assert _count(cached) == _count(baseline)
+        assert cached.changes.count() == baseline.changes.count() == 0
+        assert sorted(r.quality_errors for r in cached.rejected.collect()) == sorted(
+            r.quality_errors for r in baseline.rejected.collect()
+        )
