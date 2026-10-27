@@ -63,3 +63,27 @@ def test_official_utc_fall_repeated_hour_is_unambiguous(spark):
       ("p","2024-10-27","2024-10-27T01:15:00.000Z","0.4","0")))
     assert x.quarantine.count()==0
     assert x.valid.count()==2
+
+
+def test_profile_coverage_catches_duplicate_masking_missing_interval(spark):
+    from umig6_metering_quality.public_profiles import profile_coverage
+    data=screen_public_profiles(sample(spark,
+        ("p","2024-01-01","2024-01-01T00:00:00.000Z","0.3","0"),
+        ("p","2024-01-01","2024-01-01T00:00:00.000Z","0.3","0"),
+    ))
+    row=profile_coverage(data, expected_intervals=2,
+        expected_start_utc="2024-01-01 00:00:00", expected_end_utc="2024-01-01 00:15:00").first()
+    assert row.observed_rows == 2
+    assert row.unique_utc_quarters == 1
+    assert row.coverage_status == "INCOMPLETE"
+
+
+def test_profile_coverage_complete_when_all_instants_are_distinct(spark):
+    from umig6_metering_quality.public_profiles import profile_coverage
+    data=screen_public_profiles(sample(spark,
+        ("p","2024-01-01","2024-01-01T00:00:00.000Z","0.3","0"),
+        ("p","2024-01-01","2024-01-01T00:15:00.000Z","0.3","0"),
+    ))
+    row=profile_coverage(data, expected_intervals=2,
+        expected_start_utc="2024-01-01 00:00:00", expected_end_utc="2024-01-01 00:15:00").first()
+    assert row.coverage_status == "COMPLETE"

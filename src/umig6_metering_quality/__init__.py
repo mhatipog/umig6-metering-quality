@@ -23,3 +23,6 @@ from .public_profiles import (
     PublicProfilesResult, read_public_profiles, screen_public_profiles, public_profile_metrics,
 )
 __all__ += ["PublicProfilesResult", "read_public_profiles", "screen_public_profiles", "public_profile_metrics"]
+
+from .public_profiles import profile_coverage
+__all__ += ["profile_coverage"]

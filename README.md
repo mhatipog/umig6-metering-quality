@@ -233,3 +233,15 @@ public_profile_metrics(checked).show()
 
 Run `python examples/benchmark_public_fluvius.py --max-files 8` for reproducible
 full-corpus metrics. These are anonymised *profiles*, not UMIG 6 messages.
+
+#### Check full-year completeness (no false confidence from row counts)
+
+```python
+from umig6_metering_quality import profile_coverage
+coverage = profile_coverage(checked)
+# Each profile should have 35,136 distinct UTC quarters in 2024.
+problems = coverage.where("coverage_status = 'INCOMPLETE'")
+```
+
+This exact per-profile distinct count is a separate Spark shuffle workload;
+see the [real-data benchmark](docs/public-fluvius-benchmark.md) for its cost.

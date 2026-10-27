@@ -72,7 +72,7 @@ def screen_public_profiles(df: DataFrame) -> PublicProfilesResult:
     local = F.when(is_explicit, F.from_utc_timestamp(explicit_utc, "Europe/Brussels")).otherwise(local_from_date)
     # EAN_ID is an anonymised profile ID; never validate it as a Belgian EAN.
     value_import = F.try_cast(F.regexp_replace(F.trim(F.col("Volume_Afname_KWh")), ",", "."), "decimal(24,9)") if hasattr(F, 'try_cast') else F.expr("try_cast(replace(trim(Volume_Afname_KWh), ',', '.') as decimal(24,9))")
-    value_export = F.expr("try_cast(replace(trim(Volume_Injectie_KWh), ',', '.') as decimal(20,6))")
+    value_export = F.expr("try_cast(replace(trim(Volume_Injectie_KWh), ',', '.') as decimal(24,9))")
     last_march = F.last_day(F.make_date(F.year(local), F.lit(3), F.lit(1)))
     last_october = F.last_day(F.make_date(F.year(local), F.lit(10), F.lit(1)))
     spring_sunday = F.date_sub(last_march, F.dayofweek(last_march) - F.lit(1))
@@ -115,3 +115,37 @@ def public_profile_metrics(result: PublicProfilesResult) -> DataFrame:
         F.sum(F.when(F.array_contains("quality_errors", "NONEXISTENT_BELGIAN_LOCAL_HOUR"), 1).otherwise(0)).alias("nonexistent_dst_rows"),
         F.sum(F.when(F.array_contains("quality_errors", "INVALID_IMPORT_KWH") | F.array_contains("quality_errors", "INVALID_INJECTION_KWH"), 1).otherwise(0)).alias("invalid_volume_rows"),
     )
+
+
+def profile_coverage(
+    checked: PublicProfilesResult, *, expected_intervals: int = 35136,
+    expected_start_utc: str = "2024-01-01 00:00:00",
+    expected_end_utc: str = "2024-12-31 23:45:00",
+) -> DataFrame:
+    """Exact year-level coverage per anonymous profile, including duplicates.
+
+    The default scope is the official 2024 leap year (366 * 96 UTC quarters).
+    Counting distinct intervals prevents a duplicate from hiding a missing slot.
+    This is a shuffled analysis and should be benchmarked separately from
+    the single-pass source-row screening.
+    """
+    if expected_intervals <= 0:
+        raise ValueError("expected_intervals must be positive")
+    df = checked.all_checked
+    counts = df.groupBy("profile_id").agg(
+        F.count("*").alias("observed_rows"),
+        F.countDistinct("interval_start_utc").alias("unique_utc_quarters"),
+        F.sum(F.when(F.size("quality_errors") > 0, 1).otherwise(0)).alias("quarantined_rows"),
+        F.min("interval_start_utc").alias("first_utc"),
+        F.max("interval_start_utc").alias("last_utc"),
+    )
+    start = F.to_timestamp(F.lit(expected_start_utc))
+    end = F.to_timestamp(F.lit(expected_end_utc))
+    return counts.withColumn("coverage_status", F.when(
+        (F.col("observed_rows") == expected_intervals)
+        & (F.col("unique_utc_quarters") == expected_intervals)
+        & (F.col("quarantined_rows") == 0)
+        & (F.col("first_utc") == start)
+        & (F.col("last_utc") == end),
+        F.lit("COMPLETE")
+    ).otherwise(F.lit("INCOMPLETE")))

@@ -20,7 +20,7 @@ import zipfile
 
 from pyspark.sql import SparkSession
 from umig6_metering_quality.public_profiles import (
-    DATASET_ID, read_public_profiles, screen_public_profiles, public_profile_metrics,
+    DATASET_ID, read_public_profiles, screen_public_profiles, public_profile_metrics, profile_coverage,
 )
 
 BASE = "https://opendata.fluvius.be"
@@ -54,7 +54,7 @@ def download(attachment, dest: Path):
     return {"archive": attachment["title"], "bytes": size, "sha256": h.hexdigest()}
 
 
-def benchmark(spark, output_path: str, *, max_files: int = 8):
+def benchmark(spark, output_path: str, *, max_files: int = 8, check_coverage: bool = False):
     spark.conf.set("spark.sql.session.timeZone", "UTC")
     results = []
     archive_checksums = []
@@ -97,6 +97,23 @@ def benchmark(spark, output_path: str, *, max_files: int = 8):
                         "seconds": round(elapsed, 3),
                         "rows_per_second": round(stats["input_rows"] / elapsed) if elapsed else None,
                     }
+                    if check_coverage:
+                        coverage_started = time.perf_counter()
+                        # This second action is deliberately accounted for separately:
+                        # it performs an exact per-profile distinct-interval check.
+                        profiles = profile_coverage(checked)
+                        from pyspark.sql import functions as F
+                        coverage_summary = profiles.agg(
+                            F.count("*").alias("profiles"),
+                            F.sum(F.when(F.col("coverage_status") == "INCOMPLETE", 1).otherwise(0)).alias("incomplete_profiles"),
+                            F.sum(F.col("observed_rows") - F.col("unique_utc_quarters")).alias("duplicate_quarters"),
+                        ).first()
+                        row["profile_coverage"] = {
+                            "profiles": int(coverage_summary.profiles),
+                            "incomplete_profiles": int(coverage_summary.incomplete_profiles),
+                            "duplicate_quarters": int(coverage_summary.duplicate_quarters),
+                            "seconds": round(time.perf_counter() - coverage_started, 3),
+                        }
                     results.append(row)
                     print("RESULT", json.dumps(row, sort_keys=True), flush=True)
                     csv_path.unlink()
@@ -124,13 +141,14 @@ def main():
     p.add_argument("--output", default="public-benchmark.json")
     p.add_argument("--max-files", type=int, default=8)
     p.add_argument("--master", default="local[2]")
+    p.add_argument("--check-coverage", action="store_true", help="Run exact distinct-quarter coverage per profile (separate shuffled workload)")
     args = p.parse_args()
     if not 1 <= args.max_files <= 8: p.error("--max-files must be between 1 and 8")
     spark = (SparkSession.builder.appName("fluvius-p6269-real-data-quality-benchmark")
         .master(args.master).config("spark.sql.session.timeZone","UTC")
         .config("spark.sql.shuffle.partitions","8").getOrCreate())
     spark.sparkContext.setLogLevel("ERROR")
-    try: benchmark(spark, args.output, max_files=args.max_files)
+    try: benchmark(spark, args.output, max_files=args.max_files, check_coverage=args.check_coverage)
     finally: spark.stop()
 
 

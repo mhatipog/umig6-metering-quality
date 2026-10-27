@@ -41,3 +41,19 @@ Interpretation:
   must be measured separately on the target platform.
 
 [Dataset and licence](https://opendata.fluvius.be/explore/dataset/1_50-verbruiksprofielen-dm-elek-kwartierwaarden-voor-een-volledig-jaar/).
+
+## Independent coverage workload
+
+The optional `--check-coverage` measures the number of unique UTC intervals
+per anonymised profile, not just the number of rows. In 2024 the expected
+count is **35,136** quarters (366 days). The check also verifies the first
+and last UTC timestamps and ensures no quarantined rows occur for a profile.
+It can therefore distinguish a complete profile from one where a duplicate
+observation hides a missing interval. This exact distinct counting requires
+a Spark shuffle and is timed **separately** from row-wise validation.
+
+```python
+from umig6_metering_quality import profile_coverage
+coverage = profile_coverage(checked)
+coverage.where("coverage_status = 'INCOMPLETE'").show()
+```
