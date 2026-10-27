@@ -70,6 +70,41 @@ idempotent merge or full rebuild for a materialized current-state table.
 
 `examples/basic_pipeline.py` contains an end-to-end synthetic demonstration.
 
+### Mijn Fluvius CSV adapter (v0.2, experimental)
+
+An optional adapter supports Dutch-language **Mijn Fluvius 15-minute electricity
+CSV reports**. These are *informative consumer exports*, not UMIG/CMS message
+payloads or certified billing values. Source columns can be explicitly mapped
+for another report layout; the adapter never guesses based on column position.
+
+```python
+from datetime import datetime, timezone
+from umig6_metering_quality import read_fluvius_csv, process_metering
+
+spark.conf.set("spark.sql.session.timeZone", "UTC")
+loaded = read_fluvius_csv(
+    spark, "/private/fluvius/quarter_hours.csv",
+    snapshot_at_utc=datetime(2026, 10, 27, 8, 0, tzinfo=timezone.utc),
+)
+result = process_metering(loaded.readings)
+# Inspect loaded.rejected AND result.rejected. No implicit coverage scope.
+```
+
+- Keeps `source_file`, original register, unit and validation status, plus
+  `revision_basis=EXPORT_SNAPSHOT`. A newer export does **not** imply an
+  official market-message revision.
+- Accepts only recognized electricity import/injection registers and kWh.
+  Unexpected units/registers/volume formats are quarantined, not guessed.
+- Local timestamps are mapped to UTC; the repeated October 02:00 hour and
+  nonexistent March 02:00 hour are quarantined when offsets are unavailable.
+  This leaves affected periods incomplete rather than fabricating timestamps.
+- Consumer CSV layouts can change. Unsupported headers fail explicitly.
+  The exact current exports still need independent verification with authorised
+  examples; no consumer data is bundled here.
+
+Try `examples/fluvius_export_pipeline.py` with two CSV exports. A Spark
+cluster, not a My Fluvius login or CMS access, is all that is required.
+
 ### Input contract
 
 One row per observed interval **per revision**; source adapters must explicitly

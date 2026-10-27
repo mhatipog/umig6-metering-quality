@@ -65,3 +65,22 @@ Scope reference -------------------------------------> coverage
 - Optional EAN-18 format checks and configured register mapping.
 - Configurable tolerance for precision/rounding where standards permit it.
 - Data quality metric tables and observability hooks (without driver-side counts).
+
+## Consumer CSV bridge (experimental)
+
+`read_fluvius_csv` reads the documented Dutch-language Mijn Fluvius electricity
+report fields, with optional explicit header mappings for other languages.
+It produces canonical Spark readings and a separate adapter-level rejection
+stream. It does **not** claim the report contains UMIG messages.
+
+- Input timestamps are Belgian local wall-clock times; clean instants are
+  converted to UTC. The repeated autumn hour and nonexistent spring hour are
+  quarantined unless a future input format provides unambiguous offsets.
+- The provided UTC snapshot timestamp orders different *exports*. It is not
+  an official market-message sequence number or validation timestamp.
+- Validation statuses are kept verbatim. They are not reinterpreted as a
+  supplier-accepted or billing-grade status.
+- Only recognized active-electricity import/injection registers and kWh are
+  accepted. Other meters/units are not converted silently.
+- The entire process remains a distributed Spark transformation. Paths and
+  provenance should stay inside access-controlled environments.
