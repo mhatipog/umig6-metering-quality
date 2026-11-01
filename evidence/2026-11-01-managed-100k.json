@@ -1,0 +1,42 @@
+{
+  "format": "umig6-managed-spark-synthetic-benchmark-v1",
+  "public_source_commit": "ff056fa8b66ea94d859835a6adeedaafdc49e543",
+  "measurement_date": "2026-11-01",
+  "workload": "four materialized correction/replay lanes; deterministic synthetic source only",
+  "configuration": {
+    "synthetic_rows": 100000,
+    "supply_points": 4096,
+    "input_partitions": 8,
+    "revisions_every": 10,
+    "cache_shared": false,
+    "manifest_buckets": 64
+  },
+  "measurements": {
+    "azure_databricks_serverless": {
+      "spark_version": "4.2.0",
+      "status": "completed",
+      "source_count_seconds": 0.484,
+      "four_lane_processing_seconds": 7.434,
+      "counts": {
+        "current": 91808,
+        "rejected": 0,
+        "superseded": 8192,
+        "changes": 8192
+      },
+      "lane_fingerprints": {
+        "changes": "ffb8718380b8b244a3810e287c47f2141c18cc09545326e2331c450df1960569",
+        "current": "4adef101e135fbad0c3ae37007310baf2a765a39549e6ec9a8e52795b77b213e",
+        "rejected": "a37e150c2cf61b5c7ce3d26beb4f8b8a872bb76f75bc8ce4b26e3ff6a44ba74e",
+        "superseded": "fb80817a0ca7d2aa75f383b7dfe2061566c741a209a6ad1a696398418ea0c2aa"
+      },
+      "provenance": "Real notebook execution; sanitized full job evidence retained privately"
+    }
+  },
+  "limits": [
+    "single measured managed Spark run with no hardware normalization",
+    "source counting timed separately but processing actions may recompute synthetic source",
+    "does not include Databricks job startup, transfer, Delta writes, storage or billing",
+    "no official UMIG6 message conformance, real metering-correction history or customer data",
+    "not a claim that one provider is faster or cheaper than another"
+  ]
+}
