@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — cross-platform migration evidence
+
+- Deterministic, bounded, partition-invariant four-lane Spark fingerprints
+  including schemas and record multiplicities. These are regression signals,
+  not collision-free proof of complete row-set equality.
+- Executable synthetic parity fixtures exercising late revisions, duplicate
+  deliveries, conflicting tied revisions, and invalid metering values.
+- Portable, callable Spark workloads for correction-heavy processing and
+  caller-staged official public P6269 data, plus optional isolated Delta retry.
+- Public reproducibility contract and a Spark 3.5/4.2 evidence smoke workflow.
+  Managed platform results remain unpublished pending verified live runs.
+
 ## 0.8.0 — 27 October 2026
 
 **Public developer handoff.** Strict source-revision mode and declared timestamp guards prevent unresolved UTC labels or export snapshots from being mistaken for authoritative market corrections. The default remains usable for *explicitly labelled* consumer-export comparisons; those results are not MIG6 market corrections.
