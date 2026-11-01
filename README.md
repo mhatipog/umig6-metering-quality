@@ -1,128 +1,54 @@
-# UMIG6 Metering Quality for PySpark
+# Metering quality for Spark
 
-[![Tests](https://github.com/mhatipog/umig6-metering-quality/actions/workflows/ci.yml/badge.svg)](https://github.com/mhatipog/umig6-metering-quality/actions/workflows/ci.yml)
-![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Spark](https://img.shields.io/badge/PySpark-3.5%20%7C%204.2-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+A PySpark library for checking interval-metering data, tracing source revisions and keeping uncertain records out of trusted outputs. Built around Belgian quarter-hour metering, but the processing patterns are general.
 
-**Reusable PySpark data-quality, source-provenance, quarantine, reconciliation, and legacy migration-readiness checks for Belgian energy datasets.**
-
-Built for Spark/Databricks data pipelines that ingest interval meter readings and need to separate malformed rows, ambiguous revisions, uncertain source timestamps and actual changes without losing the audit trail.
-
-This is **MIG6 / UMIG 6-aware engineering software, not an official MIG6 validator**. It does not parse native market messages, reproduce unpublished DGO thresholds, certify billing values, or establish Atrias compliance. See [rule provenance](docs/rule-provenance.md).
+**Author:** Metin Hatipogullari — data platform architect with hands-on Databricks and data-quality framework design experience. This is an independent open-source project; it contains no client data or code.
 
 ## What it does
 
-| Module | Purpose | Key output |
-| --- | --- | --- |
-| `screen_metering_rows` | Fast, row-level interval/identity/energy checks | accepted / quarantine / summary |
-| `screen_source_provenance` | Gate timestamps, source identity, evidence references and genuine revision claims | analytics-ready / replay-ready / review / quarantine |
-| `process_metering` | Resolve source revisions without choosing conflicting values; retain changes and older versions | current / rejected / superseded / changes / optional coverage |
-| `coverage_issues` | Check gaps and overlaps against **caller-supplied active periods** | time-window issues |
-| `validate_asset_history`, `reconcile_metering_assets` | Validate meter-to-EAN effective dating and annotate uncertain historical joins | accepted / rejected / review signals |
-| `evaluate_readiness` | Structural preflight for `METERING_REPLAY`, `ASSET_HISTORY`, `SUPPLIER_CHANGE` | ready / blockers / quarantine / summary |
-| `envelope_quarantine`, `write_delta_batch` | Stable batch-scoped evidence identifiers and retryable Delta table writes | quarantine and per-reason counts |
-| `screen_continuous_measures` | Narrow checks linked to a **historically pinned** public UMIG rule handbook | PASS / FAIL / INCOMPLETE |
-| `read_fluvius_csv`, `read_public_profiles` | Adapters for supported consumer CSVs and the public P6269 research dataset | normalized/checkable observations |
+- Checks interval boundaries, readings, identifiers and source provenance.
+- Keeps invalid and ambiguous records in separate quarantine/review streams.
+- Resolves genuine source revisions without silently discarding conflicting values.
+- Checks coverage against supplied active periods and validates meter/asset history.
 
-**Important:** structural validation is not equivalent to official market acceptance. An `EXPORT_SNAPSHOT` is not a `SOURCE_REVISION`; a local time with a `Z` suffix is not necessarily verified UTC. The library can quarantine or defer uncertain evidence rather than guess.
+The core is Spark-native DataFrame processing, with no row-by-row Python UDFs. It runs on Apache Spark, including Databricks and Microsoft Fabric.
 
-## Install
+## Try it
 
-No PyPI release has been published. Install from this repository on the cluster/driver environment:
+Python 3.10+ and Spark 3.5+:
 
 ```bash
-git clone https://github.com/mhatipog/umig6-metering-quality.git
-cd umig6-metering-quality
-python -m pip install -e .
 python -m pip install -e '.[test]'
 pytest -q
+python examples/basic_pipeline.py
 ```
 
-Requires Python 3.10+ and PySpark 3.5+ (tested on **3.5.5 and 4.2.1**, 97 tests each on 1 November 2026). Match Python, Java and Spark versions to your Databricks Runtime. The package does not create or configure a cluster.
-
-## Minimal Databricks/Spark example
-
-The input here is **already normalised** and contains the documented canonical metering columns plus operator-supplied source-provenance metadata. An authorised adapter must interpret original timestamp and revision semantics first.
+For an existing, *normalised* metering table with documented source revisions:
 
 ```python
-from umig6_metering_quality import (
-    screen_metering_rows,
-    screen_source_provenance,
-    process_metering,
-)
+from umig6_metering_quality import screen_metering_rows, screen_source_provenance, process_metering
 
-spark.conf.set("spark.sql.session.timeZone", "UTC")
-source = spark.read.table("energy_bronze.metering")
+rows = screen_metering_rows(spark.table("bronze.metering"))
+origin = screen_source_provenance(rows.accepted)
 
-bronze = screen_metering_rows(source)
-evidence = screen_source_provenance(bronze.accepted)
-
-# Do not discard bronze.quarantine, evidence.review or evidence.quarantine.
-# True source revisions only: export snapshot timestamps are not corrections.
-with process_metering(
-    evidence.replay_ready,
-    require_source_revision=True,
-    cache_shared=True,      # Optional: useful if materialising multiple sinks
-) as resolved:
-    resolved.current.show(5, truncate=False)
-    resolved.rejected.show(5, truncate=False)
-    resolved.superseded.show(5, truncate=False)
-    resolved.changes.show(5, truncate=False)
+with process_metering(origin.replay_ready, require_source_revision=True) as result:
+    current = result.current
+    rejected = result.rejected
+    # Persist all required outputs before making a batch visible.
 ```
 
-The `cache_shared` context releases shared Spark persistence. `.show()` is for a demonstration, not an appropriate sink for sensitive production data. Retain immutable Bronze originals and write each review/quarantine lane to access-restricted, versioned Delta tables. **Independent Delta writes are not an atomic multi-table transaction**; only expose a completed batch after an orchestrator confirms every required output.
+Persist the row-level quarantine and provenance review outputs too; they are not included in `current`.
 
-[Full Databricks batch example](examples/databricks_batch.py) · [Delta/quarantine operations](docs/databricks.md) · [Architecture](docs/architecture.md)
+## Evidence
 
-## Delta failure-and-recovery validation
+The tests cover Spark 3.5 and 4.2. Synthetic correction fixtures and fault-injected Delta retries have also run on managed Fabric and Databricks. For real-data checks, the original public Fluvius 2024 P6269 corpus (84.3 million rows) was processed on Databricks; one of the two archives was processed on Fabric.
 
-A controlled [managed Delta recovery test](docs/delta-recovery.md) now
-injects partial writes and a corrupted current-record output before
-reconciliation. The [1 November 2026 evidence](evidence/2026-11-01-managed-delta-recovery.json)
-shows matching four-lane fingerprints, blocked partial publication and
-successful retry/cleanup on both Microsoft Fabric and Databricks. This is
-an orchestrator-gating experiment, not an atomic multi-table commit.
+See [measured runs and limitations](docs/cross-platform-evidence.md). Raw results are in [evidence/](evidence/). These are reproducibility checks, **not** vendor performance rankings.
 
-## Cross-platform migration evidence
+## Notes
 
-[Cross-platform validation](docs/cross-platform-evidence.md) compares the
-four correction outputs across Spark runtimes using a pinned synthetic fixture
-and bounded, partition-invariant fingerprints. The project includes an
-[executable parity test](examples/cloud_validation.py),
-[correction-heavy workload](examples/cloud_replay_benchmark.py), and a
-[managed Spark adapter for the public Fluvius P6269 corpus](examples/cloud_fluvius.py).
+UMIG 6-informed, **not** an official UMIG 6 or Atrias validator. Public Fluvius profiles are not market messages; their apparent UTC timestamps have unresolved daylight-saving-time semantics. Production pipelines need source-specific contracts, access controls and a batch publication gate.
 
-**Evidence status:** the [managed Fabric correction fixture](evidence/2026-11-01-fabric-fixture-parity.json) matched local Spark 3.5.5 on four lane counts, schemas and fingerprints (1 November 2026). The same fixture also matched on Databricks serverless Spark 4.2.0. The [100,000-row synthetic replay](evidence/2026-11-01-managed-100k.json) also produced identical four-lane fingerprints on both managed engines (single runs: Databricks 7.434 s, Fabric 19.756 s; **not** a controlled speed or cost comparison). The [full original Fluvius Databricks benchmark](evidence/2026-11-01-databricks-p6269-full-corpus.json) now verifies all 84,326,400 observations and both clock-coverage interpretations across eight source CSVs. [Managed Delta recovery](evidence/2026-11-01-managed-delta-recovery.json) was also verified on both platforms; full Fabric screening and billable-cost analysis are not yet verified. The [controlled Databricks scan-size experiment](docs/p6269-cloud-tuning.md) found 128 MiB marginally fastest on average across two archive-0 repetitions (69.35 s for three validation actions), rather than a convincing gain from 64 or 256 MiB splits. The matching [Fabric scan-size experiment](evidence/2026-11-01-fabric-p6269-split-tuning-archive0.json) found 64 MiB 15.9% faster than 128 MiB in **one** capacity-constrained archive-0 run, but not yet a repeatable optimum. Both returned the same dataset invariant.
-Neither vendor compatibility nor multi-table Delta atomicity is inferred
-from a passed local test.
+[Design](docs/architecture.md) · [Databricks/Delta](docs/databricks.md) · [Rule sources](docs/rule-provenance.md) · [Public dataset](docs/public-fluvius-benchmark.md) · [Benchmarks](docs/benchmarking.md)
 
-## Evidence and performance
-
-Real-data and synthetic benchmarks answer **different questions**:
-
-- **Public Fluvius 2024 corpus:** 84,326,400 quarter-hour rows across 2,400 anonymised profiles, read directly from the official ZIP attachments. Row-grain checks found no violations under their implemented technical rules. The **2,400 profiles are complete by local Belgian clock rules**; the timestamps are *not independently verified as UTC instants*. [Dataset analysis and full run](docs/public-fluvius-benchmark.md).
-- **Correction-heavy synthetic replay:** 1,000,000 generated observations including 98,304 changed historical revisions. Materialising all four replay outputs at eight shuffle partitions took **59.418 seconds without caching** and **32.426 seconds with opt-in shared caching**, single runs on GitHub-hosted local Spark 4.2.1. These are not Azure Databricks/Photon timings. [Benchmark method, limitations and logs](docs/benchmarking.md).
-- **CI:** [93 tests pass on PySpark 3.5.5 and 4.2.1](https://github.com/mhatipog/umig6-metering-quality/actions/runs/40557078089).
-
-Nothing in these results establishes official MIG6 message conformance or performance on actual production MDM/CMS history.
-
-## Provenance and DST warning
-
-The public P6269 2024 CSV has repeated `02:00–02:45` labels on 27 October and no such labels on 31 March, while its timestamps include a `Z` suffix. This matches **Belgian local-clock DST behaviour** but does not establish unique UTC instants. The source labels remain unverified, and the separate `profile_local_clock_coverage()` check validates the local clock without fabricating a UTC mapping.
-
-In source-authored correction pipelines, call `screen_source_provenance()` first and run `process_metering(..., require_source_revision=True)` on its `replay_ready` subset. [Detailed evidence register](docs/rule-provenance.md) · [DST diagnosis](docs/p6269-clock-semantics.md).
-
-## Documentation
-
-- [Quick operational handoff](docs/HANDOFF.md): safe uses, limitations, adoption checklist and reproducibility.
-- [Architecture and input assumptions](docs/architecture.md)
-- [Source and validation-rule provenance](docs/rule-provenance.md) · [Pinned historical rule profile](docs/public-rulebook.md)
-- [Legacy-data scenarios](docs/migration-readiness.md)
-- [Azure Databricks and quarantine](docs/databricks.md)
-- [Real Fluvius data benchmark](docs/public-fluvius-benchmark.md) · [Spark performance benchmarks](docs/benchmarking.md)
-- [Changelog](CHANGELOG.md) · [CI tests](.github/workflows/ci.yml)
-
-## Contributing and privacy
-
-MIT-licensed, public, and unaffiliated with Atrias, Fluvius or other energy-market participants. Issues and tested pull requests are welcome. Use synthetic or authorised public data only; never post actual customer EANs, measurements, confidential UMIG artefacts, credentials or internal source contracts in GitHub issues, CI logs or pull requests. Quarantine outputs may contain sensitive raw data and require restricted access.
+MIT license. Issues and reproducible contributions welcome.

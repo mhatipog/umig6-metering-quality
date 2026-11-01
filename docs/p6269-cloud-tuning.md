@@ -1,127 +1,15 @@
-# Managed Spark read-tuning experiment: Fluvius P6269 2024
+# P6269 CSV scan tuning
 
-The experiment compares **configurations within each runtime**. It is not
-an apples-to-apples Fabric-versus-Databricks cost or runtime ranking.
+Measured on **42,163,200 original Fluvius observations** (archive 0) using Spark's `spark.sql.files.maxPartitionBytes`. Each configuration runs row screening, strict UTC-label coverage and local-clock coverage. All aggregate invariants matched across settings and platforms.
 
-## Real input and acceptance contract
+| File split | Fabric (1 trial) | Databricks (mean of 2) |
+| --- | ---: | ---: |
+| 64 MiB | **496.476 s** | 78.588 s |
+| 128 MiB | 590.561 s | **69.345 s** |
+| 256 MiB | 505.032 s | 70.293 s |
 
-Two source ZIP archives from the public Fluvius Open Data P6269 catalog,
-verified against the published SHA-256 fingerprints in
-[the full-corpus evidence](../evidence/2026-11-01-databricks-p6269-full-corpus.json),
-contain eight original CSV files, **84,326,400 quarter-hour observations**
-across **2,400 anonymized profiles**.
+**Finding:** 64 MiB finished 15.9% sooner than 128 MiB in the one Fabric trial. Databricks showed no improvement from moving off 128 MiB across two non-randomized repetitions. These are **within-platform observations**, not vendor comparisons: compute sizes, admission, caching and shared-load effects were not normalized, and CUs/DBUs were not measured.
 
-Run each official four-file archive separately when the free-tier compute
-limits prevent an eight-file action. After both parts pass, aggregate the
-results only when their archive hashes, code commit and configuration match.
-Do not present two independent jobs as one monolithic Spark job.
+Source integrity and results: [Fabric JSON](../evidence/2026-11-01-fabric-p6269-split-tuning-archive0.json) · [Databricks JSON](../evidence/2026-11-01-databricks-p6269-split-tuning-archive0.json). The CSVs are public metering profiles, not UMIG 6 messages; clock labels have unresolved UTC meaning.
 
-The benchmark performs all three workloads for each file:
-
-1. Original P6269 source screening and import/injection volume aggregates.
-2. Strict UTC-label uniqueness diagnostics.
-3. Exact Belgian local-clock coverage, including the repeated autumn hour.
-
-It checks all row, rejection, profile, and energy-total evidence **after
-every configuration**. A purported speed improvement fails acceptance if
-one invariant differs.
-
-## First managed Fabric measurement: archive 0 (1 November 2026)
-
-The owned, low-compute Fabric Spark runtime 4.1.1 executed the **same**
-42,163,200 official rows under three scan split settings, checking every
-quality, UTC-label and local-clock invariant against the Databricks reference.
-
-| Input split | Screening + two coverage action groups |
-| --- | ---: |
-| 128 MiB | 590.561 s |
-| **64 MiB** | **496.476 s** |
-| 256 MiB | 505.032 s |
-
-The 64 MiB trial took **15.9% less execution time** than 128 MiB,
-equivalent to 1.19× throughput. The 256 MiB trial took 14.5% less.
-Unlike the repeated Databricks data below, **this is one repetition per
-Fabric setting** on a capacity-constrained environment. Fixed ordering,
-concurrent workloads, resource admission and partition scheduling remain
-confounders. Neither CPU allocation nor CUs billed were independently
-measured. It would be misleading to claim a universal 64 MiB optimum or a
-direct Fabric-versus-Databricks ranking.
-
-[Verified Fabric scan-size measurements](../evidence/2026-11-01-fabric-p6269-split-tuning-archive0.json).
-Both platforms report **the same SHA-256 aggregate invariant** for the
-original archive-0 corpus and preserve all 42,163,200 rows.
-
-## First managed measurement: Databricks archive 0 (1 November 2026)
-
-Six real Spark serverless executions ran the three validation and coverage
-workloads against **42,163,200 original records** in four checksum-verified
-category files. Every configuration returned the same accepted/rejected
-counts, import/injection totals and exact local-clock/UTC-label coverage.
-
-| Input split | Rep 1 three-action sum | Rep 2 | Mean |
-| --- | ---: | ---: | ---: |
-| 64 MiB | 80.215 s | 76.960 s | 78.588 s |
-| **128 MiB** | **74.009 s** | **64.681 s** | **69.345 s** |
-| 256 MiB | 67.313 s | 73.272 s | 70.293 s |
-
-The default 128 MiB setting gave the lowest mean of two non-randomized
-repetitions. Smaller 64 MiB splits were **13.3% slower** relative to 128 MiB.
-The first 256 MiB run was fastest individually, but its two-run mean was not.
-This evidence rules out a convincing improvement via split size alone; it
-does **not** establish a universally optimal Spark setting.
-
-[Measured JSON with source hashes, complete counts and run provenance](../evidence/2026-11-01-databricks-p6269-split-tuning-archive0.json).
-Other archive and managed Fabric configuration results must be separately
-executed and verified before inferring 84.3M-corpus optimal settings.
-
-## Controlled variable
-
-The first matrix varies **`spark.sql.files.maxPartitionBytes`**, which changes
-input scan tasks without changing the algorithm:
-
-| Experiment | File split target | Hypothesis |
-| --- | ---: | --- |
-| High parallelism | 64 MiB | More tasks; benefits if scan parsing saturates CPU |
-| Platform default | 128 MiB | Reference, often a sensible balance |
-| Larger tasks | 256 MiB | Less scheduler overhead, may hurt due to spill/underutilization |
-
-Use `examples/p6269_tuning.py` with a real Spark session and **four staged
-original CSV paths**, or eight when capacity permits:
-
-```bash
-python examples/p6269_tuning.py --archive 0 \
-  --csv source-0-category-{0,1,2,3}.csv \
-  --sizes 128 64 256 --repeats 2 --output archive0-spark.json
-```
-
-Those shell paths are illustrative: use the correct fully qualified
-OneLake ABFS/Files paths on Fabric and governed Volume paths on Databricks.
-No local `SparkSession.master('local')` override is used.
-
-## Interpretation and controls
-
-- Report data staging separately from Spark read/validation/coverage times.
-- Record whether each configuration value actually took effect.
-- Prefer repeated within-engine measurements; first-run cache, adaptive
-  scheduling, competing jobs and dynamic executor allocation confound timing.
-- **Do not hard-code executor cores/memory on Databricks serverless.** The
-  vendor manages that compute. Supported SQL file-splitting options are
-  more defensible for this comparison.
-- AQE may be enabled by default; it should be captured, not implied to be a
-  newly enabled speed optimization.
-- Fabric capacity and Spark job admission can be shared with other work.
-  Time spent waiting for admission is not the Spark action time.
-- V-Order is a *Delta write layout feature*, not an input CSV parser boost;
-  it should not be conflated with this benchmark.
-- No Photon/NEE advantage may be claimed without an actual observed engine
-  mode and measurement. Neither a speed ratio nor cost ratio can be
-  extrapolated from one uncontrolled execution.
-
-Source timestamp labels resemble UTC but follow Belgian local daylight
-saving behavior; no configuration can invent authoritative UTC offsets.
-The original public sample is not a native MIG6 message exchange, does not
-validate billing, and should not be described as such.
-
-Cross-engine reproducibility requires matching all eight-file evidence
-against [the Databricks baseline](../evidence/2026-11-01-databricks-p6269-full-corpus.json).
-Publish only completed measurements, not skipped runs or tuning hypotheses.
+To reproduce, stage the verified original CSV files, then run [p6269_tuning.py](../examples/p6269_tuning.py) with the actual managed Spark session, three split values, repeat count and a JSON output path. Record engine/runtime, source hashes and action times; do not include network or cluster startup in action timing.
