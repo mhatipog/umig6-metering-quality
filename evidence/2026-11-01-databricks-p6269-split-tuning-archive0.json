@@ -1,0 +1,77 @@
+{
+  "format": "umig6-databricks-p6269-read-tuning-v1",
+  "verification_date": "2026-11-01",
+  "public_source_commit": "bd1f1ac60bc2f59e73f5b7d575fccb052adeaa3b",
+  "managed_engine": "Azure Databricks serverless",
+  "spark_version": "4.2.0",
+  "github_action_run_id": 41300322372,
+  "archive_index": 0,
+  "source_zip_sha256": "0f8addd57bd9f7bc0fd0c28b019a4b6c8753a19e3fd301de758f5a5858c9d86c",
+  "source_csv_sha256_verified": 4,
+  "dataset": "Four original P6269 2024 category files; no synthetic readings",
+  "total_source_rows": 42163200,
+  "aggregate_evidence": {
+    "import_kwh": "5155573.879386000",
+    "injection_kwh": "1546600.987000000",
+    "passed": 42163200,
+    "quarantined": 0,
+    "profiles_local_complete": 1200,
+    "profiles_utc_labels_incomplete": 1200,
+    "rows": 42163200
+  },
+  "invariant_sha256": "e13a33bc6ea9f211571662122d1a2fd0dae1852f4717b1bbf4882dbe91530098",
+  "fixed_configuration": {
+    "cache_shared": false,
+    "repetitions": 2,
+    "validates": [
+      "row screen and energy sums",
+      "strict UTC-label coverage",
+      "Belgian local-clock coverage"
+    ]
+  },
+  "measurements": [
+    {
+      "split_mib": 128,
+      "repetition": 1,
+      "action_seconds": 74.009
+    },
+    {
+      "split_mib": 64,
+      "repetition": 1,
+      "action_seconds": 80.215
+    },
+    {
+      "split_mib": 256,
+      "repetition": 1,
+      "action_seconds": 67.313
+    },
+    {
+      "split_mib": 128,
+      "repetition": 2,
+      "action_seconds": 64.681
+    },
+    {
+      "split_mib": 64,
+      "repetition": 2,
+      "action_seconds": 76.96
+    },
+    {
+      "split_mib": 256,
+      "repetition": 2,
+      "action_seconds": 73.272
+    }
+  ],
+  "mean_action_seconds": {
+    "64": 78.5875,
+    "128": 69.345,
+    "256": 70.2925
+  },
+  "interpretation": "128MiB marginally fastest over two within-platform repetitions; 64MiB 13.33% slower; 256MiB 1.37% slower. Not a statistical performance guarantee.",
+  "limitations": [
+    "This measures archive0 only, not both 42.16M partitions of the 84.33M corpus",
+    "Single serverless workspace; two repetitions per split, non-randomized ordering",
+    "Action timings sum three independent workload stages, exclude cluster initialization, managed object-store staging, and DBUs/cost",
+    "Source Z suffix follows Belgian local DST labels, not independently verified unique UTC instants",
+    "Public anonymized metering profiles are not official UMIG6 market-message conformance"
+  ]
+}
