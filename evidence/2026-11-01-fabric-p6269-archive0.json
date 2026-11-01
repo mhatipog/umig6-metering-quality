@@ -1,0 +1,32 @@
+{
+  "format": "umig6-fabric-original-p6269-archive0-v1",
+  "observed_date_utc": "2026-11-01",
+  "source_commit": "597a95b89a05128c885a1913153c09281d63b57a",
+  "runtime": "Microsoft Fabric managed Spark",
+  "spark_version": "4.1.1.5.5.20260929.238183312",
+  "github_run": 41299291497,
+  "original_source_archive_index": 0,
+  "archive_sha256": "0f8addd57bd9f7bc0fd0c28b019a4b6c8753a19e3fd301de758f5a5858c9d86c",
+  "source_csv_members_sha256_revalidated": 4,
+  "original_source_categories": 4,
+  "input_rows": 42163200,
+  "accepted_rows": 42163200,
+  "quarantined_rows": 0,
+  "complete_local_clock_profiles": 1200,
+  "strict_utc_label_incomplete_profiles": 1200,
+  "accepted_import_kwh": "5155573.879386000",
+  "accepted_injection_kwh": "1546600.987000000",
+  "timings_seconds": {
+    "row_screen_sum": 150.909,
+    "strict_utc_label_coverage_sum": 167.929,
+    "local_clock_coverage_sum": 181.371
+  },
+  "verification": "all four original CSVs passed real Fabric Spark screening and two independent coverage checks",
+  "limitations": [
+    "Archive 1 not yet part of this Fabric run; this is half the original corpus",
+    "Three separate Spark actions per file; summed processing times do not represent one end-to-end Spark job",
+    "No billable CU measurement or normalization; do not compare these times directly with Databricks or hosted Spark",
+    "The source's Z-suffixed clock labels remain unverified unique UTC instants",
+    "Public anonymized profiles are not native UMIG6 message exchanges"
+  ]
+}
