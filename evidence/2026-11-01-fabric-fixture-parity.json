@@ -22,7 +22,8 @@
     "delta_round_trip_tested": false,
     "full_p6269_corpus_tested": false,
     "performance_comparison_tested": false,
-    "third_engine_verified": true
+    "third_engine_verified": true,
+    "fourth_engine_verified": true
   },
   "counts": {
     "changes": 1,
@@ -44,5 +45,16 @@
     "lane_counts_match": true,
     "lane_fingerprints_match": true,
     "artifact": "sanitized private Oracle job artifact reviewed"
+  },
+  "additional_managed_candidate": {
+    "engine": "Azure Databricks serverless",
+    "version": "4.2.0",
+    "execution_state": "SUCCESS",
+    "fixture_verified": true,
+    "source_commit": "ff056fa8b66ea94d859835a6adeedaafdc49e543",
+    "lane_counts_match": true,
+    "column_schemas_match": true,
+    "lane_fingerprints_match_all_other_engines": true,
+    "artifact": "sanitized private Databricks job artifact reviewed"
   }
 }
