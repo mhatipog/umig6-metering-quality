@@ -41,7 +41,12 @@ def run(spark, *, prefix=None, buckets=64):
                 df = override if override is not None else lanes[lane]
                 writer = df.write.format("delta")
                 if first:
-                    writer.mode("errorifexists").saveAsTable(names[lane])
+                    # Spark Connect on managed serverless does not consistently
+                    # support DataFrameWriter mode=errorifexists.
+                    existing = spark.sql("SHOW TABLES LIKE '" + names[lane] + "'").count()
+                    if existing:
+                        raise RuntimeError("Scratch table name already exists")
+                    writer.mode("overwrite").option("overwriteSchema", "true").saveAsTable(names[lane])
                     allocated.append(names[lane])
                 else:
                     writer.mode("overwrite").option("overwriteSchema", "true").saveAsTable(names[lane])
@@ -65,7 +70,9 @@ def run(spark, *, prefix=None, buckets=64):
                     "state string, input_scope string, lane_fingerprints_json string",
                 )
                 if marker not in allocated:
-                    frame.write.format("delta").mode("errorifexists").saveAsTable(marker)
+                    if spark.sql("SHOW TABLES LIKE '" + marker + "'").count():
+                        raise RuntimeError("Scratch publication marker exists")
+                    frame.write.format("delta").mode("overwrite").saveAsTable(marker)
                     allocated.append(marker)
                 else:
                     frame.write.format("delta").mode("overwrite").saveAsTable(marker)
