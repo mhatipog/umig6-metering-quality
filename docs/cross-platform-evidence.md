@@ -47,6 +47,23 @@ Capture the runtime/compute policy, Photon availability, DBU/VM usage when
 measured and the JSON artifact. Serverless can behave differently from a
 classic cluster. A Free Edition execution is not a comparable paid cost study.
 
+### Live original P6269 evidence — 1 November 2026
+
+The first [Databricks half-corpus result](../evidence/2026-11-01-databricks-p6269-archive0.json)
+has been measured on serverless Spark 4.2.0: the official archive SHA-256
+matched, its four extracted CSV member checksums were recorded, all
+42,163,200 observations passed the implemented row-level structural screen,
+and all 1,200 anonymised profiles were complete under Belgian **local
+clock** coverage. Those same profiles do not establish unique UTC instants
+under the source's misleading `Z` labels. Import and injection energy
+totals are reported as exact decimal aggregates to enable future
+cross-engine reconciliation.
+
+This is four of eight category files, not a completed 84.3-million-row
+Fabric/Databricks comparison. Individual run timings omit archive download,
+cloud session startup, storage and billable compute. Do not treat them
+as a provider ranking.
+
 ### Original Fluvius archive staging
 
 The [managed storage stage](../examples/cloud_stage_fluvius.py) downloads
