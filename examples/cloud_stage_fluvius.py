@@ -133,3 +133,74 @@ def stage(directory, *, archive_indices=(0, 1), max_archive_bytes=1_600_000_000)
 def sanitized(result):
     """Public metadata; never export storage locations or source measurements."""
     return {k:v for k,v in result.items() if k != "paths"}
+
+
+def stage_verified_archive(archive_path, directory, *, archive_index):
+    """Extract an already-uploaded original ZIP without internet on Spark nodes.
+
+    For restricted Databricks serverless environments, the owner can transfer
+    the pinned ZIP through UC Files APIs, then call this from a managed notebook.
+    Re-verifies the compressed bytes *inside* that environment before reading
+    a single input row. Does not invent a UTF/UTC mapping.
+    """
+    if archive_index not in (0, 1):
+        raise ValueError("Unexpected original archive index")
+    source = Path(archive_path)
+    dest = Path(directory)
+    if not str(source).startswith("/Volumes/") or not str(dest).startswith("/Volumes/"):
+        raise ValueError("Existing-archive staging is restricted to owned UC volumes")
+    if "umig6-p6269-2024" not in str(dest):
+        raise ValueError("Output must be an isolated P6269 staging directory")
+    if source.stat().st_size > 1_600_000_000:
+        raise ValueError("Original compressed file exceeds pinned limit")
+    h = hashlib.sha256()
+    with source.open("rb") as stream:
+        while True:
+            chunk = stream.read(2 * 1024 * 1024)
+            if not chunk:
+                break
+            h.update(chunk)
+    if h.hexdigest() not in EXPECTED_ARCHIVES:
+        raise ValueError("Original archive checksum mismatch after managed upload")
+    dest.mkdir(parents=True, exist_ok=True)
+    created = []
+    files = []
+    try:
+        with zipfile.ZipFile(source) as archive:
+            members = sorted((x for x in archive.infolist()
+                              if x.filename.lower().endswith(".csv")),
+                             key=lambda x: x.filename)
+            if len(members) != 4:
+                raise ValueError("Expected four original CSVs per source ZIP")
+            for index, part in enumerate(members):
+                if not re.fullmatch(r"[^/\\]+\.csv", part.filename, flags=re.IGNORECASE):
+                    raise ValueError("Unexpected nested ZIP member path")
+                if part.file_size > 1_000_000_000:
+                    raise ValueError("CSV member exceeds safety cap")
+                path = dest / ("source-%d-category-%d.csv" % (archive_index, index))
+                if path.exists():
+                    raise FileExistsError("Verified staged category already exists")
+                temp = dest / (path.name + ".partial")
+                try:
+                    with archive.open(part) as reader, temp.open("xb") as writer:
+                        count, checksum = _stream_copy(reader, writer, limit=1_000_000_000)
+                    if count != part.file_size:
+                        raise ValueError("Extracted original member byte count mismatch")
+                    os.replace(temp, path)
+                    created.append(path)
+                finally:
+                    if temp.exists():
+                        temp.unlink()
+                files.append({"archive_index": archive_index, "member_index": index,
+                              "filename": path.name, "bytes": count, "sha256": checksum})
+    except Exception:
+        # Roll back only files created by this call; never touch other staged archives.
+        for path in created:
+            path.unlink(missing_ok=True)
+        raise
+    return {"format": "umig6-p6269-verified-upload-extraction-v1",
+            "verified_original_archive_sha256": h.hexdigest(),
+            "archive_index": archive_index,
+            "source_members": files, "staged_csv_count": len(files),
+            "paths": [str(dest / f["filename"]) for f in files],
+            "utc_instant_mapping_verified": False}
