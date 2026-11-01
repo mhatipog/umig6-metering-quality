@@ -26,6 +26,29 @@ It checks all row, rejection, profile, and energy-total evidence **after
 every configuration**. A purported speed improvement fails acceptance if
 one invariant differs.
 
+## First managed measurement: Databricks archive 0 (1 November 2026)
+
+Six real Spark serverless executions ran the three validation and coverage
+workloads against **42,163,200 original records** in four checksum-verified
+category files. Every configuration returned the same accepted/rejected
+counts, import/injection totals and exact local-clock/UTC-label coverage.
+
+| Input split | Rep 1 three-action sum | Rep 2 | Mean |
+| --- | ---: | ---: | ---: |
+| 64 MiB | 80.215 s | 76.960 s | 78.588 s |
+| **128 MiB** | **74.009 s** | **64.681 s** | **69.345 s** |
+| 256 MiB | 67.313 s | 73.272 s | 70.293 s |
+
+The default 128 MiB setting gave the lowest mean of two non-randomized
+repetitions. Smaller 64 MiB splits were **13.3% slower** relative to 128 MiB.
+The first 256 MiB run was fastest individually, but its two-run mean was not.
+This evidence rules out a convincing improvement via split size alone; it
+does **not** establish a universally optimal Spark setting.
+
+[Measured JSON with source hashes, complete counts and run provenance](../evidence/2026-11-01-databricks-p6269-split-tuning-archive0.json).
+Other archive and managed Fabric configuration results must be separately
+executed and verified before inferring 84.3M-corpus optimal settings.
+
 ## Controlled variable
 
 The first matrix varies **`spark.sql.files.maxPartitionBytes`**, which changes
