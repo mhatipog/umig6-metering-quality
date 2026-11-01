@@ -2,8 +2,6 @@
 
 A PySpark library for checking interval-metering data, tracing source revisions and keeping uncertain records out of trusted outputs. Built around Belgian quarter-hour metering, but the processing patterns are general.
 
-**Author:** Metin Hatipogullari — data platform architect with hands-on Databricks and data-quality framework design experience. This is an independent open-source project; it contains no client data or code.
-
 ## What it does
 
 - Checks interval boundaries, readings, identifiers and source provenance.
