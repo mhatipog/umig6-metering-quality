@@ -27,3 +27,13 @@ from incomplete tables.
 Unexecuted workloads are not platform evidence. Public results must include
 actual managed Spark runtime, source commit, run IDs retained privately,
 sanitized counts/fingerprints, and whether cleanup succeeded.
+
+## Managed results — 1 November 2026
+
+The [sanitized independent executions](../evidence/2026-11-01-managed-delta-recovery.json)
+were verified on Fabric Spark 4.1.1 and Databricks serverless Spark 4.2.0
+using the same pinned source commit `d59b04563522f3bc6f96301ad4594fd568cf97cd`.
+All four output-lane SHA-256 regression fingerprints matched across engines.
+Both detected the intentionally damaged current lane, withheld publication,
+replayed correctly and reported successful disposal of the scratch tables.
+These tests use eight synthetic observations, not official market corrections.
