@@ -1,0 +1,87 @@
+{
+  "format": "umig6-databricks-original-p6269-full-corpus-v1",
+  "verified_date": "2026-11-01",
+  "source_commit": "db6e3fac99dbceb995c3df737ed8246f5da6d8e2",
+  "dataset": "Official Fluvius P6269 2024 public anonymized quarter-hour meter profiles",
+  "engine": "Databricks serverless",
+  "spark_version": "4.2.0",
+  "execution_scope": "Eight original category CSVs across two separately completed serverless notebook jobs, four CSVs per job",
+  "private_verified_run_ids": [
+    41298822767,
+    41298855166
+  ],
+  "archive_sha256": [
+    "0f8addd57bd9f7bc0fd0c28b019a4b6c8753a19e3fd301de758f5a5858c9d86c",
+    "cfef37973c40e503fe53afa4966bbdcd7a12525fb8b20881f365d0ee8616a3d6"
+  ],
+  "archive_bytes": [
+    197375122,
+    199377167
+  ],
+  "category_csv_sha256": [
+    "ef3cbf1e441a96879987eee63d4dc0fb842142a2a9e3381e006372c034020967",
+    "8ec22469ce1674bc14fc43eb89a79d78db53d7047c932c21f23af3eabba8b0ab",
+    "16d55c99fc6ea47a2bd0efd1d908a857b9ded1fc08e2be38001cbb28002670b6",
+    "f4e31d559ac46faf94f629cce35e3edc520c2bb210c44b2fbc16f19a6f567692",
+    "6a993a4d1778343ba356c55aa9c9783c7d50719f64825aa76b762dcbe610ecc8",
+    "4925fe8aeeb7c032e62658904295212608e0590ca22c5b072720456bcf485fb7",
+    "d39727ea98c23255568366d2e15371f13960874ea8ea1ea519a00c7c34c2c826",
+    "0c0c96bc2de8de54f43717c9532353287e300a750917ee699c8089bf9fbc7e77"
+  ],
+  "category_csv_bytes": [
+    797294675,
+    797786309,
+    790497785,
+    790345181,
+    800926499,
+    804175121,
+    800697761,
+    808132319
+  ],
+  "total_original_csv_bytes": 6389855650,
+  "total_observations": 84326400,
+  "accepted_row_level": 84326400,
+  "quarantined_row_level": 0,
+  "local_clock_complete_profiles": 2400,
+  "strict_utc_label_incomplete_profiles": 2400,
+  "unique_utc_instants_verified": false,
+  "accepted_import_kwh": "13076523.788958000",
+  "accepted_injection_kwh": "3126393.891000000",
+  "category_processing_seconds": [
+    9.323,
+    5.59,
+    5.402,
+    5.421,
+    5.781,
+    5.73,
+    5.739,
+    6
+  ],
+  "category_utc_label_coverage_seconds": [
+    6.304,
+    5.609,
+    5.391,
+    5.59,
+    5.837,
+    5.621,
+    5.488,
+    7.512
+  ],
+  "category_local_clock_coverage_seconds": [
+    7.122,
+    6.619,
+    6.789,
+    6.971,
+    7.15,
+    6.73,
+    6.745,
+    8.714
+  ],
+  "limitations": [
+    "Two category-scoped runs; wall times are separate Spark actions, not a single end-to-end 84m pipeline",
+    "All observations pass implemented technical row checks on curated public profiles, not market-message certification",
+    "Original Z-suffixed timestamps follow Belgian local clock including DST, not independently verified unique UTC instants",
+    "Timings exclude cluster start, original archive download, extraction, cloud storage and billable serverless resource cost",
+    "No production MDM/CMS revisions, source-authored settlement corrections or confidential customer data"
+  ]
+}
