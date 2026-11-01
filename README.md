@@ -75,6 +75,20 @@ The `cache_shared` context releases shared Spark persistence. `.show()` is for a
 
 [Full Databricks batch example](examples/databricks_batch.py) · [Delta/quarantine operations](docs/databricks.md) · [Architecture](docs/architecture.md)
 
+## Cross-platform migration evidence
+
+[Cross-platform validation](docs/cross-platform-evidence.md) compares the
+four correction outputs across Spark runtimes using a pinned synthetic fixture
+and bounded, partition-invariant fingerprints. The project includes an
+[executable parity test](examples/cloud_validation.py),
+[correction-heavy workload](examples/cloud_replay_benchmark.py), and a
+[managed Spark adapter for the public Fluvius P6269 corpus](examples/cloud_fluvius.py).
+
+**Evidence status:** local Spark results are published below; Fabric and
+Databricks managed-runtime measurements are pending actual executions.
+Neither vendor compatibility nor multi-table Delta atomicity is inferred
+from a passed local test.
+
 ## Evidence and performance
 
 Real-data and synthetic benchmarks answer **different questions**:
