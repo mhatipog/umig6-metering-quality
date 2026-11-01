@@ -2,6 +2,9 @@
 
 ## Unreleased — cross-platform migration evidence
 
+- Verified managed Fabric and Databricks fault-injected Delta batch recovery, with same-source four-lane fingerprints and explicit cleanup checks. Added strict official P6269 archive staging utilities; no full managed public-corpus claim is published yet.
+
+
 - Deterministic, bounded, partition-invariant four-lane Spark fingerprints
   including schemas and record multiplicities. These are regression signals,
   not collision-free proof of complete row-set equality.

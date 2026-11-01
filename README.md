@@ -75,6 +75,15 @@ The `cache_shared` context releases shared Spark persistence. `.show()` is for a
 
 [Full Databricks batch example](examples/databricks_batch.py) · [Delta/quarantine operations](docs/databricks.md) · [Architecture](docs/architecture.md)
 
+## Delta failure-and-recovery validation
+
+A controlled [managed Delta recovery test](docs/delta-recovery.md) now
+injects partial writes and a corrupted current-record output before
+reconciliation. The [1 November 2026 evidence](evidence/2026-11-01-managed-delta-recovery.json)
+shows matching four-lane fingerprints, blocked partial publication and
+successful retry/cleanup on both Microsoft Fabric and Databricks. This is
+an orchestrator-gating experiment, not an atomic multi-table commit.
+
 ## Cross-platform migration evidence
 
 [Cross-platform validation](docs/cross-platform-evidence.md) compares the

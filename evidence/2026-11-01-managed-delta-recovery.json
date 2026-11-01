@@ -1,0 +1,54 @@
+{
+  "format": "umig6-managed-delta-fault-injection-v1",
+  "verified_date": "2026-11-01",
+  "public_source_commit": "d59b04563522f3bc6f96301ad4594fd568cf97cd",
+  "workload": "8 synthetic metering records; four independently written managed Delta lanes",
+  "cases": [
+    "crash_after_first_sink_no_publication",
+    "full_reconciliation_then_publication",
+    "corrupted_current_detected_before_publication",
+    "idempotent_replay_and_republication"
+  ],
+  "runtimes": {
+    "fabric": {
+      "engine": "Microsoft Fabric managed Spark",
+      "spark_version": "4.1.1.5.5.20260929.238183312",
+      "verified": true,
+      "cleanup_success": true,
+      "retained_private_run_id": 41297601846
+    },
+    "databricks": {
+      "engine": "Databricks serverless",
+      "spark_version": "4.2.0",
+      "verified": true,
+      "cleanup_success": true,
+      "retained_private_run_id": 41297601692
+    }
+  },
+  "checks": {
+    "interruption_blocks_publication": true,
+    "all_four_lanes_reconcile": true,
+    "damaged_lane_detected": "current",
+    "replay_preserves_fingerprints": true,
+    "cleanup_verified_both": true,
+    "identical_source_commit_both": true
+  },
+  "counts": {
+    "current": 2,
+    "rejected": 3,
+    "superseded": 2,
+    "changes": 1
+  },
+  "lane_fingerprints_sha256": {
+    "changes": "28813232929f7787e822e064c1f4984981bb3550e8c551acc2065a1ab7420322",
+    "current": "889d82e890192c412a5068a2c66bf892d198a32eb9ba46b65567214379c4b001",
+    "rejected": "ce43cf87b9d6a1cb3e9b82ccba8c845e6d26b9df24226e0546dadedca0a1d30e",
+    "superseded": "a51aa6431cc10edd0b4a7d26b23d89dd7473ef2560deb16a344fd092d1411f90"
+  },
+  "limitations": [
+    "No atomic four-table Delta transaction; test verifies explicit orchestrator gate only",
+    "Scratch managed tables in owner-controlled labs; not production data",
+    "No concurrent readers or adversarial writers, no billing or UMIG6 exchange semantics",
+    "No real Fluvius archives in this experiment"
+  ]
+}

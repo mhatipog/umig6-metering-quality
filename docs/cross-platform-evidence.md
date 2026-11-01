@@ -47,6 +47,31 @@ Capture the runtime/compute policy, Photon availability, DBU/VM usage when
 measured and the JSON artifact. Serverless can behave differently from a
 classic cluster. A Free Edition execution is not a comparable paid cost study.
 
+### Original Fluvius archive staging
+
+The [managed storage stage](../examples/cloud_stage_fluvius.py) downloads
+the two **original official ZIP attachments** directly from the Fluvius
+Opendatasoft v2.1 metadata endpoint, checks both archive SHA-256 hashes
+against the published full-corpus baseline, limits compressed and extracted
+member sizes, validates CRC through streaming ZIP reads, and writes each
+category CSV to an isolated Fabric Lakehouse Files or Databricks Unity Catalog
+volume path.
+
+The stage never constructs synthetic market identities from public profile
+IDs. Its return manifest records source and category checksums, byte sizes,
+and individual staging times. Raw profile rows and credentials must not be
+published. The separate [managed corpus scanner](../examples/cloud_fluvius.py)
+takes the eight staged CSV paths and computes source-grain quality plus
+strict UTC-label and Belgian local-clock coverage separately.
+
+Do **not** claim a managed full-corpus run from a staging manifest, one
+category, or the original GitHub-hosted baseline alone. The first managed
+platform runs must finish all eight original files, verify expected
+84,326,400 observations and 2,400 local-clock-complete profiles, retain
+archive/member checksums, and report actual runtime/capacity consumption.
+Databricks Free Edition can restrict outbound HTTP and storage; blocked
+ingestion should be recorded as a platform limitation, not an empty dataset.
+
 ### Reproduction
 
 1. Install a wheel built from the pinned public commit on the managed engine.
