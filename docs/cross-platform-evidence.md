@@ -76,7 +76,7 @@ and other private data out of the public evidence.
 Historical local Spark and full 84,326,400-row Fluvius benchmarks:
 [benchmarking](benchmarking.md) and [public P6269](public-fluvius-benchmark.md).
 
-Managed Fabric correction-fixture parity: **verified 1 November 2026** on Fabric Spark 4.1.1.5.5.20260929.238183312. All four output counts, column schemas and 64-bucket manifest fingerprints matched the GitHub-hosted Spark 3.5.5 fixture. The [sanitized measured report](../evidence/2026-11-01-fabric-fixture-parity.json) records exact source commit and fingerprints. The underlying Fabric execution artifact is retained privately; the public report is independently reproducible but not a public vendor-certified attestation. This does not cover full P6269, managed Delta writes, recovery or capacity cost.
+Managed Fabric correction-fixture parity: **verified 1 November 2026** on Fabric Spark 4.1.1.5.5.20260929.238183312. All four output counts, column schemas and 64-bucket manifest fingerprints matched both GitHub-hosted Spark 3.5.5 and a separate Oracle ARM64 Spark 4.2.1 run (four evidence tests passed). The [sanitized measured report](../evidence/2026-11-01-fabric-fixture-parity.json) records exact source commit and fingerprints. The underlying Fabric execution artifact is retained privately; the public report is independently reproducible but not a public vendor-certified attestation. This does not cover full P6269, managed Delta writes, recovery or capacity cost.
 
 Managed Databricks parity: **not yet measured**.
 
