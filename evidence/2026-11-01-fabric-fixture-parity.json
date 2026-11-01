@@ -21,7 +21,8 @@
     "all_four_lane_manifest_fingerprints_match": true,
     "delta_round_trip_tested": false,
     "full_p6269_corpus_tested": false,
-    "performance_comparison_tested": false
+    "performance_comparison_tested": false,
+    "third_engine_verified": true
   },
   "counts": {
     "changes": 1,
@@ -35,5 +36,13 @@
     "rejected": "ce43cf87b9d6a1cb3e9b82ccba8c845e6d26b9df24226e0546dadedca0a1d30e",
     "superseded": "a51aa6431cc10edd0b4a7d26b23d89dd7473ef2560deb16a344fd092d1411f90"
   },
-  "interpretation": "Correction-fixture parity only; not official UMIG6 conformance, production migration validation, cross-table atomicity or vendor performance evidence"
+  "interpretation": "Correction-fixture parity only; not official UMIG6 conformance, production migration validation, cross-table atomicity or vendor performance evidence",
+  "additional_reference": {
+    "engine": "Apache Spark on Oracle ARM64",
+    "version": "4.2.1",
+    "ci_result": "4 evidence tests passed; separate fixture executed",
+    "lane_counts_match": true,
+    "lane_fingerprints_match": true,
+    "artifact": "sanitized private Oracle job artifact reviewed"
+  }
 }
