@@ -84,8 +84,7 @@ and bounded, partition-invariant fingerprints. The project includes an
 [correction-heavy workload](examples/cloud_replay_benchmark.py), and a
 [managed Spark adapter for the public Fluvius P6269 corpus](examples/cloud_fluvius.py).
 
-**Evidence status:** local Spark results are published below; Fabric and
-Databricks managed-runtime measurements are pending actual executions.
+**Evidence status:** the [managed Fabric correction fixture](evidence/2026-11-01-fabric-fixture-parity.json) matched local Spark 3.5.5 on four lane counts, schemas and fingerprints (1 November 2026). Full Fluvius cloud runs, managed Delta recovery and Databricks results remain unverified.
 Neither vendor compatibility nor multi-table Delta atomicity is inferred
 from a passed local test.
 
