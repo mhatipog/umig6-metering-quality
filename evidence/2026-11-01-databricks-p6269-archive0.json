@@ -1,0 +1,48 @@
+{
+  "format": "umig6-managed-public-p6269-archive0-v1",
+  "verified_date": "2026-11-01",
+  "source_commit": "db6e3fac99dbceb995c3df737ed8246f5da6d8e2",
+  "dataset": "official-Fluvius-2024-P6269-not-native-UMIG6",
+  "engine": "Databricks serverless",
+  "spark_version": "4.2.0",
+  "scope": "four of eight original category files; partial corpus",
+  "archive_sha256": "0f8addd57bd9f7bc0fd0c28b019a4b6c8753a19e3fd301de758f5a5858c9d86c",
+  "compressed_bytes": 197375122,
+  "source_member_sha256": [
+    "ef3cbf1e441a96879987eee63d4dc0fb842142a2a9e3381e006372c034020967",
+    "8ec22469ce1674bc14fc43eb89a79d78db53d7047c932c21f23af3eabba8b0ab",
+    "16d55c99fc6ea47a2bd0efd1d908a857b9ded1fc08e2be38001cbb28002670b6",
+    "f4e31d559ac46faf94f629cce35e3edc520c2bb210c44b2fbc16f19a6f567692"
+  ],
+  "rows": 42163200,
+  "accepted": 42163200,
+  "quarantined": 0,
+  "profiles": 1200,
+  "complete_local_clock_profiles": 1200,
+  "strict_utc_label_incomplete_profiles": 1200,
+  "source_utc_mapping_verified": false,
+  "per_category_row_screen_seconds": [
+    9.323,
+    5.59,
+    5.402,
+    5.421
+  ],
+  "per_category_utc_coverage_seconds": [
+    6.304,
+    5.609,
+    5.391,
+    5.59
+  ],
+  "per_category_local_coverage_seconds": [
+    7.122,
+    6.619,
+    6.789,
+    6.971
+  ],
+  "limitations": [
+    "Half-corpus only; remaining four category CSVs not included",
+    "Single serverless run; timings exclude job startup, staging and source transfer",
+    "No official UMIG6 source-feed or billability certification",
+    "Original timestamps have unverified UTC instant semantics"
+  ]
+}
