@@ -1,0 +1,62 @@
+{
+  "format": "umig6-original-p6269-fabric-source-staging-v1",
+  "verified_date": "2026-11-01",
+  "scope": "Eight original 2024 public Fluvius P6269 category CSVs staged and SHA256-verified in owned Fabric Lakehouse",
+  "archive_inputs": [
+    {
+      "part": 0,
+      "compressed_bytes": 197375122,
+      "sha256": "0f8addd57bd9f7bc0fd0c28b019a4b6c8753a19e3fd301de758f5a5858c9d86c",
+      "fabric_run_id": 41298339865,
+      "members": [
+        {
+          "bytes": 797294675,
+          "sha256": "ef3cbf1e441a96879987eee63d4dc0fb842142a2a9e3381e006372c034020967"
+        },
+        {
+          "bytes": 797786309,
+          "sha256": "8ec22469ce1674bc14fc43eb89a79d78db53d7047c932c21f23af3eabba8b0ab"
+        },
+        {
+          "bytes": 790497785,
+          "sha256": "16d55c99fc6ea47a2bd0efd1d908a857b9ded1fc08e2be38001cbb28002670b6"
+        },
+        {
+          "bytes": 790345181,
+          "sha256": "f4e31d559ac46faf94f629cce35e3edc520c2bb210c44b2fbc16f19a6f567692"
+        }
+      ]
+    },
+    {
+      "part": 1,
+      "compressed_bytes": 199377167,
+      "sha256": "cfef37973c40e503fe53afa4966bbdcd7a12525fb8b20881f365d0ee8616a3d6",
+      "fabric_run_id": 41298685010,
+      "members": [
+        {
+          "bytes": 800926499,
+          "sha256": "6a993a4d1778343ba356c55aa9c9783c7d50719f64825aa76b762dcbe610ecc8"
+        },
+        {
+          "bytes": 804175121,
+          "sha256": "4925fe8aeeb7c032e62658904295212608e0590ca22c5b072720456bcf485fb7"
+        },
+        {
+          "bytes": 800697761,
+          "sha256": "d39727ea98c23255568366d2e15371f13960874ea8ea1ea519a00c7c34c2c826"
+        },
+        {
+          "bytes": 808132319,
+          "sha256": "0c0c96bc2de8de54f43717c9532353287e300a750917ee699c8089bf9fbc7e77"
+        }
+      ]
+    }
+  ],
+  "spark_row_validation_state": "pending; original staging does not establish successful Spark processing",
+  "source_utc_mapping_verified": false,
+  "boundaries": [
+    "Public anonymized P6269 profiles are not native UMIG6 source messages",
+    "Strong ZIP and CSV byte integrity do not imply billing/market certification",
+    "Public report excludes source measurements and customer-level identifiers"
+  ]
+}
