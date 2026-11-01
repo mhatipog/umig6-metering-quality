@@ -44,5 +44,8 @@
     "Single serverless run; timings exclude job startup, staging and source transfer",
     "No official UMIG6 source-feed or billability certification",
     "Original timestamps have unverified UTC instant semantics"
-  ]
+  ],
+  "sum_accepted_import_kwh": "5155573.879386000",
+  "sum_accepted_injection_kwh": "1546600.987000000",
+  "measurement_method": "Spark decimal aggregation of unmodified publicly staged CSV observations, not independently verified billing totals"
 }
