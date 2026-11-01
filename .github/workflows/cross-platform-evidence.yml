@@ -1,0 +1,49 @@
+name: Cross-runtime evidence smoke
+on:
+  pull_request:
+    paths:
+      - 'src/umig6_metering_quality/evidence.py'
+      - 'examples/cloud_validation.py'
+      - 'tests/test_evidence.py'
+      - '.github/workflows/cross-platform-evidence.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/umig6_metering_quality/evidence.py'
+      - 'examples/cloud_validation.py'
+      - 'tests/test_evidence.py'
+      - '.github/workflows/cross-platform-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  correction-fixture:
+    name: Spark ${{ matrix.pyspark }} synthetic parity
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        pyspark: ['3.5.5', '4.2.1']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -e . 'pyspark==${{ matrix.pyspark }}'
+      - name: Export bounded correction manifest
+        env:
+          SPARK_LOCAL_IP: 127.0.0.1
+          UMIG6_RUNTIME: github-hosted-local-spark
+        run: python examples/cloud_validation.py --output "evidence-spark-${{ matrix.pyspark }}.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: parity-spark-${{ matrix.pyspark }}
+          path: evidence-spark-${{ matrix.pyspark }}.json
+          if-no-files-found: warn
+          retention-days: 30
