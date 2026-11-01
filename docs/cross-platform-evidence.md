@@ -59,8 +59,19 @@ under the source's misleading `Z` labels. Import and injection energy
 totals are reported as exact decimal aggregates to enable future
 cross-engine reconciliation.
 
-This is four of eight category files, not a completed 84.3-million-row
-Fabric/Databricks comparison. Individual run timings omit archive download,
+The [complete original-corpus Databricks report](../evidence/2026-11-01-databricks-p6269-full-corpus.json)
+now combines **two successful category-scoped managed Spark runs** on the
+same pinned source commit: eight ZIP-extracted CSVs, 84,326,400 observations,
+2,400 locally complete profiles and 2,400 profiles failing strict UTC-label
+uniqueness, with zero structural rejections. Both original source archive
+SHA-256 hashes and every CSV member checksum were verified. Exact
+aggregate accepted volumes were 13,076,523.788958 kWh import and
+3,126,393.891000 kWh injection. Neither these sums nor passing structural
+checks establishes actual settlement or billability.
+
+This is an **entire 84.3-million-row corpus evaluated in two separate
+managed jobs**, not one single end-to-end timing measurement. Fabric
+full-corpus Spark screening remains separately unverified. Individual run timings omit archive download,
 cloud session startup, storage and billable compute. Do not treat them
 as a provider ranking.
 
