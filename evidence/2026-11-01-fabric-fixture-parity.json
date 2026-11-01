@@ -1,0 +1,39 @@
+{
+  "format": "umig6-managed-spark-fixture-parity-v1",
+  "verified_utc_date": "2026-11-01",
+  "source_commit": "ff056fa8b66ea94d859835a6adeedaafdc49e543",
+  "workload": "eight synthetic metering observations; late revision, duplicate delivery, conflicting latest revisions, negative energy",
+  "reference": {
+    "engine": "Apache Spark local",
+    "version": "3.5.5",
+    "run_url": "https://github.com/mhatipog/umig6-metering-quality/actions/runs/41293563247"
+  },
+  "candidate": {
+    "engine": "Microsoft Fabric managed Spark",
+    "version": "4.1.1.5.5.20260929.238183312",
+    "execution_state": "Completed",
+    "fixture_verified": true,
+    "artifact": "sanitized private job artifact reviewed"
+  },
+  "checks": {
+    "counts_match": true,
+    "column_schemas_match": true,
+    "all_four_lane_manifest_fingerprints_match": true,
+    "delta_round_trip_tested": false,
+    "full_p6269_corpus_tested": false,
+    "performance_comparison_tested": false
+  },
+  "counts": {
+    "changes": 1,
+    "current": 2,
+    "rejected": 3,
+    "superseded": 2
+  },
+  "lane_manifest_sha256": {
+    "changes": "28813232929f7787e822e064c1f4984981bb3550e8c551acc2065a1ab7420322",
+    "current": "889d82e890192c412a5068a2c66bf892d198a32eb9ba46b65567214379c4b001",
+    "rejected": "ce43cf87b9d6a1cb3e9b82ccba8c845e6d26b9df24226e0546dadedca0a1d30e",
+    "superseded": "a51aa6431cc10edd0b4a7d26b23d89dd7473ef2560deb16a344fd092d1411f90"
+  },
+  "interpretation": "Correction-fixture parity only; not official UMIG6 conformance, production migration validation, cross-table atomicity or vendor performance evidence"
+}
