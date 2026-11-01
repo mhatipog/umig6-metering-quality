@@ -124,3 +124,20 @@ than an unjustified UTC-to-Brussels conversion.
 No source records or anonymised profile IDs were published in artifacts.
 Both coverage checks are intentionally reported, not reconciled by guessing
 which repeated October observation maps to which offset.
+
+## Independent managed Spark reproduction — 1 November 2026
+
+A [Databricks serverless Spark 4.2.0 reproduction](../evidence/2026-11-01-databricks-p6269-full-corpus.json)
+processed the **same complete eight-file official 2024 P6269 corpus** across
+two separate source-category jobs, verifying both original ZIP SHA-256 hashes
+and all eight extracted CSV checksums. The measured outputs agreed with the
+previous local Spark source-clock findings: 84,326,400 observations, all
+2,400 anonymised profiles complete under Belgian local-clock multiplicities,
+and none establishing a distinct UTC-instant mapping from the original
+ambiguous `Z`-suffixed labels. Zero rows were quarantined by the implemented
+structural screen. Aggregates: 13,076,523.788958 kWh import and
+3,126,393.891000 kWh injection. Full input bytes, individual action times,
+source commit and scope limits are in the linked evidence file.
+
+This is independent *managed runtime execution*, not official UMIG6
+certification or a single end-to-end 84-million-row latency measurement.
