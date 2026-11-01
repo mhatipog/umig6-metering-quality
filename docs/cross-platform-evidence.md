@@ -80,6 +80,32 @@ Managed Fabric correction-fixture parity: **verified 1 November 2026** on Fabric
 
 Managed Databricks correction-fixture parity: **verified 1 November 2026** on Spark 4.2.0 serverless. The owned workspace notebook returned all four expected counts; exact column schemas and lane fingerprints matched Fabric Spark 4.1.1, GitHub-hosted Spark 3.5.5 and Oracle Spark 4.2.1. See the [sanitized four-engine evidence](../evidence/2026-11-01-fabric-fixture-parity.json). This is not a managed Delta persistence, production throughput or cost study.
 
+### Measured 100,000-row synthetic replay
+
+The managed engines both completed the same pinned four-output correction
+workload on 1 November 2026 (100,000 synthetic observations, 4,096 invented
+supply points, every tenth sequence revised, eight input partitions, cache
+disabled, 64 fingerprint buckets).
+
+| Managed runtime | Four-lane aggregate actions | Current | Superseded | Changes | Rejected |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Azure Databricks Spark 4.2.0 serverless | 7.434 s | 91,808 | 8,192 | 8,192 | 0 |
+| Microsoft Fabric Spark 4.1.1 | 19.756 s | 91,808 | 8,192 | 8,192 | 0 |
+
+The **four lane fingerprints matched exactly**, not merely the aggregate
+counts. See [sanitized 100k evidence](../evidence/2026-11-01-managed-100k.json).
+Both numbers are single unnormalized runs under distinct cloud compute
+configurations. The workload times four Spark aggregate actions; they exclude
+job startup, source download, Delta persistence and platform billing. Input
+count actions were timed separately, and lazy Spark processing may evaluate
+source expressions again. **Do not treat this table as a controlled vendor
+speed, capacity-efficiency or price comparison.**
+
+The 84,326,400-row original P6269 dataset has **not** yet been executed
+on either managed platform; the staged-input adapter is ready, but its
+cloud evidence and its source archive checksums still need to be captured.
+The optional managed Delta round-trip/retry has likewise not been run.
+
 The two managed platforms should not be compared on speed/cost until data
 locality, compute sizes, cold starts, worker prices, repetitions and billing
 scope are documented. The published synthetic benchmark excludes cluster
