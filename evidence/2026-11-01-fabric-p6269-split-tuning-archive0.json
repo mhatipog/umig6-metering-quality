@@ -1,0 +1,63 @@
+{
+  "format": "umig6-fabric-p6269-read-tuning-v1",
+  "date": "2026-11-01",
+  "public_source_commit": "bd1f1ac60bc2f59e73f5b7d575fccb052adeaa3b",
+  "engine": "Microsoft Fabric managed Spark",
+  "spark_version": "4.1.1.5.5.20260929.238183312",
+  "github_action_run_id": 41300248904,
+  "archive_index": 0,
+  "source_archive_sha256": "0f8addd57bd9f7bc0fd0c28b019a4b6c8753a19e3fd301de758f5a5858c9d86c",
+  "source_csv_sha256_verified": 4,
+  "real_source_rows": 42163200,
+  "aggregate_evidence": {
+    "import_kwh": "5155573.879386000",
+    "injection_kwh": "1546600.987000000",
+    "passed": 42163200,
+    "quarantined": 0,
+    "profiles_local_complete": 1200,
+    "profiles_utc_labels_incomplete": 1200,
+    "rows": 42163200
+  },
+  "invariant_sha256": "e13a33bc6ea9f211571662122d1a2fd0dae1852f4717b1bbf4882dbe91530098",
+  "experiment": {
+    "vary": "spark.sql.files.maxPartitionBytes",
+    "repetitions": 1,
+    "measurements": [
+      {
+        "split_mib": 128,
+        "three_actions_seconds": 590.561,
+        "row_screen": 178.165,
+        "strict_utc": 202.837,
+        "local_clock": 209.559
+      },
+      {
+        "split_mib": 64,
+        "three_actions_seconds": 496.476,
+        "row_screen": 146.307,
+        "strict_utc": 171.341,
+        "local_clock": 178.828
+      },
+      {
+        "split_mib": 256,
+        "three_actions_seconds": 505.032,
+        "row_screen": 145.328,
+        "strict_utc": 173.44,
+        "local_clock": 186.264
+      }
+    ]
+  },
+  "observed_delta_vs_128_mib": {
+    "split_64_time_reduction_percent": 15.93,
+    "split_64_throughput_multiplier": 1.1895,
+    "split_256_time_reduction_percent": 14.48
+  },
+  "interpretation": "64MiB fastest within this one-run capacity-constrained Fabric trial. More repetitions and fixed pool capacity required before recommending a general optimum.",
+  "limitations": [
+    "Archive0 only, four original files, not a single complete eight-file corpus",
+    "Fabric workspace was previously right-sized to a low-compute pool for unrelated tiny experiments; actual per-run cores and CU billing were not independently measured",
+    "One repetition per setting, fixed-order effects and load/concurrent jobs cannot be excluded",
+    "Time is a sum of 12 distinct Spark action groups (four files × three checks), not a complete job including notebook startup, staging, or storage",
+    "Not a cross-vendor speed/cost comparison or official UMIG6 conformance",
+    "Public Z timestamp labels have unverified UTC semantics"
+  ]
+}
