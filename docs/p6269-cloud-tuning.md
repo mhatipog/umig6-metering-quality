@@ -26,6 +26,31 @@ It checks all row, rejection, profile, and energy-total evidence **after
 every configuration**. A purported speed improvement fails acceptance if
 one invariant differs.
 
+## First managed Fabric measurement: archive 0 (1 November 2026)
+
+The owned, low-compute Fabric Spark runtime 4.1.1 executed the **same**
+42,163,200 official rows under three scan split settings, checking every
+quality, UTC-label and local-clock invariant against the Databricks reference.
+
+| Input split | Screening + two coverage action groups |
+| --- | ---: |
+| 128 MiB | 590.561 s |
+| **64 MiB** | **496.476 s** |
+| 256 MiB | 505.032 s |
+
+The 64 MiB trial took **15.9% less execution time** than 128 MiB,
+equivalent to 1.19× throughput. The 256 MiB trial took 14.5% less.
+Unlike the repeated Databricks data below, **this is one repetition per
+Fabric setting** on a capacity-constrained environment. Fixed ordering,
+concurrent workloads, resource admission and partition scheduling remain
+confounders. Neither CPU allocation nor CUs billed were independently
+measured. It would be misleading to claim a universal 64 MiB optimum or a
+direct Fabric-versus-Databricks ranking.
+
+[Verified Fabric scan-size measurements](../evidence/2026-11-01-fabric-p6269-split-tuning-archive0.json).
+Both platforms report **the same SHA-256 aggregate invariant** for the
+original archive-0 corpus and preserve all 42,163,200 rows.
+
 ## First managed measurement: Databricks archive 0 (1 November 2026)
 
 Six real Spark serverless executions ran the three validation and coverage
