@@ -78,7 +78,7 @@ Historical local Spark and full 84,326,400-row Fluvius benchmarks:
 
 Managed Fabric correction-fixture parity: **verified 1 November 2026** on Fabric Spark 4.1.1.5.5.20260929.238183312. All four output counts, column schemas and 64-bucket manifest fingerprints matched both GitHub-hosted Spark 3.5.5 and a separate Oracle ARM64 Spark 4.2.1 run (four evidence tests passed). The [sanitized measured report](../evidence/2026-11-01-fabric-fixture-parity.json) records exact source commit and fingerprints. The underlying Fabric execution artifact is retained privately; the public report is independently reproducible but not a public vendor-certified attestation. This does not cover full P6269, managed Delta writes, recovery or capacity cost.
 
-Managed Databricks parity: **not yet measured**.
+Managed Databricks correction-fixture parity: **verified 1 November 2026** on Spark 4.2.0 serverless. The owned workspace notebook returned all four expected counts; exact column schemas and lane fingerprints matched Fabric Spark 4.1.1, GitHub-hosted Spark 3.5.5 and Oracle Spark 4.2.1. See the [sanitized four-engine evidence](../evidence/2026-11-01-fabric-fixture-parity.json). This is not a managed Delta persistence, production throughput or cost study.
 
 The two managed platforms should not be compared on speed/cost until data
 locality, compute sizes, cold starts, worker prices, repetitions and billing
