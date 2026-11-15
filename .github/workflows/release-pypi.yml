@@ -1,0 +1,60 @@
+name: Release to PyPI
+
+# Manual only. PyPI trusted publishing (GitHub OIDC): no API token in this repository.
+# PyPI side, once: a (pending) trusted publisher for project umig6-metering-quality with
+# owner mhatipog, repository umig6-metering-quality, workflow release-pypi.yml, environment pypi.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish; must equal pyproject.toml"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-pypi
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Requested version matches pyproject.toml and is new on PyPI
+        env: { REQUESTED: "${{ inputs.version }}" }
+        run: |
+          python -c "import tomllib,os,sys; v=tomllib.load(open('pyproject.toml','rb'))['project']['version']; sys.exit(0 if v==os.environ['REQUESTED'] else f'pyproject says {v}')"
+          code=$(curl -s -o /dev/null -w '%{http_code}' "https://pypi.org/pypi/umig6-metering-quality/$REQUESTED/json")
+          test "$code" = 404 || { echo "version $REQUESTED already on PyPI (HTTP $code)"; exit 1; }
+      - run: |
+          python -m pip install --quiet build twine
+          python -m build
+          python -m twine check --strict dist/*
+      - name: Test suite against the built wheel
+        run: |
+          python -m venv /tmp/spark
+          whl=$(ls dist/*.whl)
+          /tmp/spark/bin/pip install --quiet "${whl}[spark]" pytest
+          mkdir /tmp/t && cp -r tests examples /tmp/t/ && cd /tmp/t
+          /tmp/spark/bin/python -m pytest -q tests
+      - uses: actions/upload-artifact@v4
+        with: { name: dist, path: dist/, retention-days: 3 }
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: dist, path: dist/ }
+      - uses: pypa/gh-action-pypi-publish@release/v1

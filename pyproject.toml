@@ -1,20 +1,39 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "umig6-metering-quality"
-version = "0.8.0"
+version = "0.9.0"
 description = "MIG6-aware PySpark quality, quarantine, migration readiness, and pinned public metering checks"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["umig6", "mig6", "belgium", "energy", "metering", "pyspark", "data-quality", "reconciliation", "fluvius", "atrias"]
-classifiers = ["Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only", "Topic :: Database", "Topic :: Scientific/Engineering :: Information Analysis"]
-dependencies = ["pyspark>=3.5,<5"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Database",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
+# PySpark is not a hard dependency: Databricks, Fabric and other Spark runtimes already provide it,
+# and installing the PyPI wheel over them breaks the runtime (and Databricks Connect).
+dependencies = []
 
 [project.optional-dependencies]
-test = ["pytest>=8"]
+spark = ["pyspark>=3.5,<5"]
+test = ["pytest>=8", "pyspark>=3.5,<5"]
+
+[project.urls]
+Homepage = "https://github.com/mhatipog/umig6-metering-quality"
+Documentation = "https://github.com/mhatipog/umig6-metering-quality/tree/main/docs"
+Issues = "https://github.com/mhatipog/umig6-metering-quality/issues"
+Changelog = "https://github.com/mhatipog/umig6-metering-quality/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]
