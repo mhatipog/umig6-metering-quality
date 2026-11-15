@@ -3,6 +3,14 @@
 This library does not implement the Atrias CMS and is not officially certified.
 """
 
+try:
+    import pyspark  # noqa: F401  (provided by the Spark runtime, or by the [spark] extra)
+except ImportError as exc:  # pragma: no cover - exercised by the packaging CI job
+    raise ImportError(
+        "umig6-metering-quality needs PySpark. On Databricks or Fabric it is already installed; "
+        "locally use: pip install 'umig6-metering-quality[spark]'"
+    ) from exc
+
 from .pipeline import MeteringQualityResult, process_metering, coverage_issues
 from .fluvius_csv import FluviusCsvResult, read_fluvius_csv
 

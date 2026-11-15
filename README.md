@@ -13,7 +13,21 @@ The core is Spark-native DataFrame processing, with no row-by-row Python UDFs. I
 
 ## Try it
 
-Python 3.10+ and Spark 3.5+:
+Python 3.10+ and Spark 3.5+.
+
+On Databricks, Microsoft Fabric or another Spark runtime (Spark is already there):
+
+```bash
+pip install umig6-metering-quality
+```
+
+Locally, with PySpark and a Java 17 runtime:
+
+```bash
+pip install "umig6-metering-quality[spark]"
+```
+
+From a checkout, to run the tests and the synthetic example:
 
 ```bash
 python -m pip install -e '.[test]'
@@ -41,12 +55,12 @@ Persist the row-level quarantine and provenance review outputs too; they are not
 
 The tests cover Spark 3.5 and 4.2. Synthetic correction fixtures and fault-injected Delta retries have also run on managed Fabric and Databricks. For real-data checks, the original public Fluvius 2024 P6269 corpus (84.3 million rows) was processed on Databricks; one of the two archives was processed on Fabric.
 
-See [measured runs and limitations](docs/cross-platform-evidence.md). Raw results are in [evidence/](evidence/). These are reproducibility checks, **not** vendor performance rankings.
+See [measured runs and limitations](https://github.com/mhatipog/umig6-metering-quality/blob/main/docs/cross-platform-evidence.md). Raw results are in [evidence/](https://github.com/mhatipog/umig6-metering-quality/tree/main/evidence). These are reproducibility checks, **not** vendor performance rankings.
 
 ## Notes
 
 UMIG 6-informed, **not** an official UMIG 6 or Atrias validator. Public Fluvius profiles are not market messages; their apparent UTC timestamps have unresolved daylight-saving-time semantics. Production pipelines need source-specific contracts, access controls and a batch publication gate.
 
-[Design](docs/architecture.md) · [Databricks/Delta](docs/databricks.md) · [Rule sources](docs/rule-provenance.md) · [Public dataset](docs/public-fluvius-benchmark.md) · [Benchmarks](docs/benchmarking.md)
+[Design](https://github.com/mhatipog/umig6-metering-quality/blob/main/docs/architecture.md) · [Databricks/Delta](https://github.com/mhatipog/umig6-metering-quality/blob/main/docs/databricks.md) · [Rule sources](https://github.com/mhatipog/umig6-metering-quality/blob/main/docs/rule-provenance.md) · [Public dataset](https://github.com/mhatipog/umig6-metering-quality/blob/main/docs/public-fluvius-benchmark.md) · [Benchmarks](https://github.com/mhatipog/umig6-metering-quality/blob/main/docs/benchmarking.md)
 
 MIT license. Issues and reproducible contributions welcome.

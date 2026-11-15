@@ -23,3 +23,36 @@ jobs:
           python-version: '3.11'
       - run: python -m pip install -e '.[test]' 'pyspark==${{ matrix.pyspark }}'
       - run: python -m pytest -q
+
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build and check
+        run: |
+          python -m pip install --quiet build twine
+          python -m build
+          python -m twine check --strict dist/*
+      - name: Without PySpark, import fails with an install hint
+        run: |
+          python -m venv /tmp/bare
+          /tmp/bare/bin/pip install --quiet dist/*.whl
+          ! /tmp/bare/bin/pip show pyspark >/dev/null 2>&1
+          /tmp/bare/bin/python -c "import umig6_metering_quality" 2>&1 | tee /tmp/err.txt || true
+          grep -q "umig6-metering-quality\[spark\]" /tmp/err.txt
+      - name: With the [spark] extra, the test suite passes against the installed wheel
+        run: |
+          python -m venv /tmp/spark
+          whl=$(ls dist/*.whl)
+          /tmp/spark/bin/pip install --quiet "${whl}[spark]" pytest
+          mkdir /tmp/t && cp -r tests examples /tmp/t/ && cd /tmp/t
+          /tmp/spark/bin/python -m pytest -q tests
+          /tmp/spark/bin/python examples/basic_pipeline.py

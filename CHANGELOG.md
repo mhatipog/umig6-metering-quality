@@ -1,7 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.9.0 — 15 November 2026
 
+First release on PyPI.
+
+- `pyspark` is no longer a hard dependency, so installing on Databricks, Fabric or Databricks Connect leaves the
+  runtime's Spark alone. Locally, install `umig6-metering-quality[spark]`.
+- Package metadata: SPDX licence, project URLs, classifiers; README links work on PyPI.
 - Verified four-lane synthetic replay and fault-injected Delta recovery in managed Fabric and Databricks.
 - Added checksum-verified staging and real Spark screening for the original public Fluvius P6269 data; full Databricks corpus and partial Fabric corpus documented with reproducible evidence.
 - Added Spark input-split experiments with unchanged correctness invariants.
